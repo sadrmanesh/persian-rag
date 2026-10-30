@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from persian_rag.bm25 import BM25Index
+from persian_rag.cache import LRUCache, result_cache_key
 from persian_rag.chunk import Chunk
 from persian_rag.embeddings import Embedder
 from persian_rag.normalize import NormalizeConfig, normalize
@@ -29,6 +31,8 @@ class RetrievalResult:
     metadata: dict[str, Any] = field(default_factory=dict)
     dense_rank: int | None = None
     sparse_rank: int | None = None
+    retrieval_score: float | None = None
+    """First-stage score, set when a reranker replaced :attr:`score`."""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -41,6 +45,7 @@ class RetrievalResult:
             "metadata": self.metadata,
             "dense_rank": self.dense_rank,
             "sparse_rank": self.sparse_rank,
+            "retrieval_score": self.retrieval_score,
         }
 
 
@@ -86,6 +91,10 @@ class HybridRetriever:
     Hybrid mode ranks with reciprocal rank fusion. Dense-only mode returns
     cosine similarity (or the store's native score). Sparse-only mode
     returns BM25 scores.
+
+    Pass ``result_cache`` (for example ``LRUCache(max_size=512, ttl=300)``)
+    to reuse results for repeated queries. The cache is cleared whenever
+    chunks are added.
     """
 
     def __init__(
@@ -100,6 +109,7 @@ class HybridRetriever:
         dense_weight: float = 1.0,
         sparse_weight: float = 1.0,
         candidate_multiplier: int = 4,
+        result_cache: LRUCache[list[RetrievalResult]] | None = None,
     ) -> None:
         if rrf_k < 0:
             raise ValueError("rrf_k must be >= 0")
@@ -120,6 +130,7 @@ class HybridRetriever:
         self._chunks: dict[str, Chunk] = {}
         self._embeddings: dict[str, list[float]] = {}
         self._order: list[str] = []
+        self.result_cache = result_cache
 
     def __len__(self) -> int:
         return len(self._order)
@@ -177,6 +188,8 @@ class HybridRetriever:
             self._chunks[chunk.id] = chunk
             self._embeddings[chunk.id] = list(vector)
             self._order.append(chunk.id)
+        if self.result_cache is not None:
+            self.result_cache.clear()
 
     def retrieve(
         self,
@@ -195,6 +208,12 @@ class HybridRetriever:
             return []
 
         normalized = normalize(query, self.normalize_config)
+        cache_key = None
+        if self.result_cache is not None:
+            cache_key = result_cache_key(normalized, k, mode)
+            cached = self.result_cache.get(cache_key)
+            if cached is not None:
+                return list(cached)
         pool = min(len(self._chunks), max(k, k * self.candidate_multiplier))
         dense_ids: list[str] = []
         dense_scores: dict[str, float] = {}
@@ -241,4 +260,17 @@ class HybridRetriever:
                     sparse_rank=sparse_ranks.get(doc_id),
                 )
             )
+        if self.result_cache is not None and cache_key is not None:
+            self.result_cache.set(cache_key, list(results))
         return results
+
+    async def aretrieve(
+        self,
+        query: str,
+        k: int = 5,
+        *,
+        mode: RetrievalMode = "hybrid",
+    ) -> list[RetrievalResult]:
+        """Async variant of :meth:`retrieve`; runs in a worker thread."""
+
+        return await asyncio.to_thread(self.retrieve, query, k, mode=mode)

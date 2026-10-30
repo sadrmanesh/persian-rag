@@ -17,3 +17,7 @@ class IndexNotFoundError(PersianRagError):
 
 class IndexFormatError(PersianRagError):
     """A saved index is unreadable or uses an unsupported format."""
+
+
+class MissingDependencyError(PersianRagError, ImportError):
+    """An optional dependency needed for this feature is not installed."""
