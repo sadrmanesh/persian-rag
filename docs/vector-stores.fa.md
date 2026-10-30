@@ -4,10 +4,14 @@
 
 | پایگاه | افزونه | محل نگهداری | حذف |
 | --- | --- | --- | --- |
-| `InMemoryVectorStore` | ندارد | حافظه برنامه | خیر |
+| `InMemoryVectorStore` | ندارد | حافظه برنامه | بله |
 | `FaissVectorStore` | `faiss` | حافظه برنامه | خیر |
 | `QdrantVectorStore` | `qdrant` | سرور، سرویس ابری، پوشه محلی یا حافظه | بله |
 | `PgVectorStore` | `pgvector` | پایگاه PostgreSQL | بله |
+| `ElasticsearchStore` | ندارد | Elasticsearch 8 | بله |
+| `OpenSearchStore` | ندارد | OpenSearch 2 | بله |
+
+پایگاه های Elasticsearch و OpenSearch جست و جوی BM25 بخش ترکیبی را هم انجام می دهند. صفحه [Elasticsearch و OpenSearch](search-engines.md) را ببینید. پایگاه هایی که حذف را پشتیبانی می کنند با [ایندکس سازی تدریجی](incremental.md) کار می کنند.
 
 ## پایگاه Qdrant
 

@@ -4,10 +4,14 @@ All stores implement the same protocol: `add(ids, vectors, texts, metadatas)`, `
 
 | Store | Extra | Persistence | Delete |
 | --- | --- | --- | --- |
-| `InMemoryVectorStore` | none | process memory | no |
+| `InMemoryVectorStore` | none | process memory | yes |
 | `FaissVectorStore` | `faiss` | process memory | no |
 | `QdrantVectorStore` | `qdrant` | server, cloud, local folder, or memory | yes |
 | `PgVectorStore` | `pgvector` | PostgreSQL | yes |
+| `ElasticsearchStore` | none | Elasticsearch 8 | yes |
+| `OpenSearchStore` | none | OpenSearch 2 | yes |
+
+The Elasticsearch and OpenSearch stores also serve BM25 for hybrid search; see [Elasticsearch and OpenSearch](search-engines.md). Stores with delete support work with [incremental indexing](incremental.md).
 
 ## Qdrant
 

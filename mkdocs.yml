@@ -66,6 +66,13 @@ plugins:
             Vector stores: پایگاه های برداری
             Caching and async: حافظه نهان و اجرای ناهمگام
             Evaluation: ارزیابی
+            Web pages and Markdown: صفحه های وب و مارک داون
+            Elasticsearch and OpenSearch: Elasticsearch و OpenSearch
+            Incremental indexing: ایندکس سازی تدریجی
+            Query rewriting: بازنویسی پرسش
+            Citations and chat: ارجاع به منبع و گفت و گو
+            LLM adapters: اتصال به مدل های زبانی
+            Benchmarks: محک ها
             HTTP API: رابط HTTP
             Command line: خط فرمان
             Releasing: انتشار نسخه
@@ -75,10 +82,17 @@ nav:
   - Getting started: getting-started.md
   - Normalization: normalization.md
   - Loading documents: loaders.md
+  - Web pages and Markdown: web.md
   - Retrieval and reranking: retrieval.md
+  - Query rewriting: query-rewriting.md
   - Vector stores: vector-stores.md
+  - Elasticsearch and OpenSearch: search-engines.md
+  - Incremental indexing: incremental.md
+  - LLM adapters: llm.md
+  - Citations and chat: citations-chat.md
   - Caching and async: caching-async.md
   - Evaluation: evaluation.md
+  - Benchmarks: benchmarks.md
   - HTTP API: server.md
   - Command line: cli.md
   - Releasing: releasing.md
