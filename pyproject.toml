@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "persian-rag"
-version = "0.2.0"
+version = "0.3.0"
 description = "Persian-first retrieval-augmented generation toolkit"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,6 +22,10 @@ keywords = [
     "reranking",
     "qdrant",
     "pgvector",
+    "elasticsearch",
+    "opensearch",
+    "ollama",
+    "citations",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -79,6 +83,7 @@ include = [
     "src/persian_rag",
     "tests",
     "examples",
+    "benchmarks",
     "README.md",
     "LICENSE",
     "CONTRIBUTING.md",
@@ -137,4 +142,5 @@ addopts = "-q"
 markers = [
     "heavy: tests that download or load large models (set PERSIAN_RAG_RUN_HEAVY=1)",
     "postgres: tests that need PostgreSQL with pgvector (set PERSIAN_RAG_PG_DSN)",
+    "search: tests that need Elasticsearch or OpenSearch (set PERSIAN_RAG_ES_URL or PERSIAN_RAG_OPENSEARCH_URL)",
 ]

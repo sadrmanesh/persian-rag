@@ -23,7 +23,11 @@ uvicorn.run(app, host="127.0.0.1", port=8000)
 | --- | --- | --- | --- |
 | `GET` | `/health` | | وضعیت، نسخه، تعداد تکه ها و وجود مدل و رتبه بند |
 | `POST` | `/retrieve` | `{"query": "...", "k": 5, "mode": "hybrid"}` | پرسش و فهرست نتیجه ها |
-| `POST` | `/query` | `{"question": "...", "k": 5}` | پرسش، پاسخ، متن ها و در صورت درخواست پرامپت |
+| `POST` | `/query` | `{"question": "...", "k": 5}` | پرسش، پاسخ، متن ها، ارجاع ها و در صورت درخواست پرامپت |
+| `POST` | `/chat` | `{"message": "...", "session_id": null}` | فیلدهای `/query` به همراه `session_id`، `standalone_question` و `turn` |
+| `DELETE` | `/chat/{session_id}` | | `{"deleted": true}` یا `false` برای گفت و گوی ناشناخته |
+
+مسیر `/chat` برای هر `session_id` یک گفت و گو نگه می دارد. صفحه [ارجاع به منبع و گفت و گو](citations-chat.md) را ببینید. پارامترهای `max_sessions=1000` و `max_turns=6` در `create_app` مصرف حافظه را محدود می کنند.
 
 درخواست با پرسش خالی، حالت نامعتبر یا `k` بیشتر از `max_k` خطای 422 می گیرد. مستندات تعاملی در مسیر `/docs` در دسترس است.
 

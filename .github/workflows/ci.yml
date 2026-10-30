@@ -83,6 +83,50 @@ jobs:
       - name: Pytest (pgvector)
         run: pytest -m postgres -rs
 
+  search:
+    name: Elasticsearch and OpenSearch integration
+    runs-on: ubuntu-latest
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -fs http://localhost:9200/_cluster/health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+      opensearch:
+        image: opensearchproject/opensearch:2.17.1
+        env:
+          discovery.type: single-node
+          DISABLE_SECURITY_PLUGIN: "true"
+          DISABLE_INSTALL_DEMO_CONFIG: "true"
+          OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+        ports:
+          - 9201:9200
+        options: >-
+          --health-cmd "curl -fs http://localhost:9200/_cluster/health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PERSIAN_RAG_ES_URL: http://localhost:9200
+      PERSIAN_RAG_OPENSEARCH_URL: http://localhost:9201
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Pytest (search)
+        run: pytest -m search -rs
+
   docs:
     name: Docs build
     runs-on: ubuntu-latest

@@ -1,0 +1,42 @@
+{"id": "q01", "question": "آرامگاه حافظ در کدام شهر است؟", "relevant_ids": ["hafez"], "tags": []}
+{"id": "q02", "question": "گلستان و بوستان را چه کسی نوشت؟", "relevant_ids": ["saadi"], "tags": []}
+{"id": "q03", "question": "شاهنامه در چند سال سروده شد؟", "relevant_ids": ["ferdowsi"], "tags": []}
+{"id": "q04", "question": "مثنوی معنوی چند دفتر دارد؟", "relevant_ids": ["molavi"], "tags": []}
+{"id": "q05", "question": "برج میلاد در کدام شهر است؟", "relevant_ids": ["tehran"], "tags": []}
+{"id": "q06", "question": "طهران", "relevant_ids": ["tehran"], "tags": ["spelling"]}
+{"id": "q07", "question": "میدان نقش جهان کجاست؟", "relevant_ids": ["isfahan"], "tags": []}
+{"id": "q08", "question": "تخت جمشید به دستور چه کسی ساخته شد؟", "relevant_ids": ["persepolis"], "tags": []}
+{"id": "q09", "question": "سفره هفت سین در چه جشنی چیده می شود؟", "relevant_ids": ["nowruz"], "tags": []}
+{"id": "q10", "question": "آخرین شب پائیز", "relevant_ids": ["yalda"], "tags": ["spelling"]}
+{"id": "q11", "question": "در شب یلدا چه میوه هایی می خورند؟", "relevant_ids": ["yalda"], "tags": []}
+{"id": "q12", "question": "اطاق پنج دری", "relevant_ids": ["room"], "tags": ["spelling"]}
+{"id": "q13", "question": "انتخاب هیات مدیره", "relevant_ids": ["board"], "tags": ["spelling"]}
+{"id": "q14", "question": "رییس جمهور چند سال انتخاب می شود", "relevant_ids": ["president"], "tags": ["spelling"]}
+{"id": "q15", "question": "ایران چند بار قهرمان جام ملت های آسیا شده است؟", "relevant_ids": ["football"], "tags": []}
+{"id": "q16", "question": "تختی در کدام المپیک مدال طلا گرفت؟", "relevant_ids": ["wrestling"], "tags": []}
+{"id": "q17", "question": "گران ترین ادویه جهان چیست؟", "relevant_ids": ["saffron"], "tags": []}
+{"id": "q18", "question": "بیشتر زعفران دنیا کجا تولید می شود؟", "relevant_ids": ["saffron"], "tags": []}
+{"id": "q19", "question": "میوه درخت پسته چه زمانی برداشت می شود؟", "relevant_ids": ["pistachio"], "tags": []}
+{"id": "q20", "question": "بزرگ ترین دریاچه جهان کدام است؟", "relevant_ids": ["caspian"], "tags": []}
+{"id": "q21", "question": "تنگه هرمز خلیج فارس را به کجا وصل می کند؟", "relevant_ids": ["persian_gulf"], "tags": []}
+{"id": "q22", "question": "چه کسی بوته چای را به ایران آورد؟", "relevant_ids": ["tea"], "tags": []}
+{"id": "q23", "question": "فرش های کدام شهرها نقشه ویژه دارند؟", "relevant_ids": ["carpet"], "tags": []}
+{"id": "q24", "question": "چرا پایتون برای علم داده محبوب است؟", "relevant_ids": ["python"], "tags": []}
+{"id": "q25", "question": "نگهداری از باطری", "relevant_ids": ["battery"], "tags": ["spelling"]}
+{"id": "q26", "question": "قیمت بلیط", "relevant_ids": ["ticket"], "tags": ["spelling"]}
+{"id": "q27", "question": "مساله وزیرها", "relevant_ids": ["queens"], "tags": ["spelling"]}
+{"id": "q28", "question": "آئین چهارشنبه", "relevant_ids": ["chaharshanbe"], "tags": ["spelling"]}
+{"id": "q29", "question": "کتاب قانون در پزشکی نوشته کیست؟", "relevant_ids": ["avicenna"], "tags": []}
+{"id": "q30", "question": "آرامگاه فردوسی کجاست؟", "relevant_ids": ["ferdowsi"], "tags": []}
+{"id": "q31", "question": "سعدیه آرامگاه کدام شاعر است؟", "relevant_ids": ["saadi"], "tags": []}
+{"id": "q32", "question": "زاینده رود از کدام شهر می گذرد؟", "relevant_ids": ["isfahan"], "tags": []}
+{"id": "q33", "question": "کدام شاعران در شیراز آرامگاه دارند؟", "relevant_ids": ["hafez", "saadi"], "tags": []}
+{"id": "q34", "question": "کوه دماوند کجاست؟", "relevant_ids": ["tehran"], "tags": []}
+{"id": "q35", "question": "جزیره کیش در کدام منطقه است؟", "relevant_ids": ["persian_gulf"], "tags": []}
+{"id": "q36", "question": "ماهی خاویار در کدام دریا زندگی می کند؟", "relevant_ids": ["caspian"], "tags": []}
+{"id": "q37", "question": "قطار سریع السیر تهران به مشهد چند ساعت در راه است؟", "relevant_ids": ["ticket"], "tags": []}
+{"id": "q38", "question": "مولانا در کدام شهر درگذشت؟", "relevant_ids": ["molavi"], "tags": []}
+{"id": "q39", "question": "سیزده بدر چه روزی است؟", "relevant_ids": ["nowruz"], "tags": []}
+{"id": "q40", "question": "اطاق بزرگ", "relevant_ids": ["room"], "tags": ["spelling"]}
+{"id": "q41", "question": "گزارش هیات مدیره به سهامداران", "relevant_ids": ["board"], "tags": ["spelling"]}
+{"id": "q42", "question": "پرجمعیت ترین شهر طهران", "relevant_ids": ["tehran"], "tags": ["spelling"]}

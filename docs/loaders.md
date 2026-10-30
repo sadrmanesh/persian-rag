@@ -3,10 +3,12 @@
 ```python
 from persian_rag import load_documents, load_docx, load_pdf
 
-documents = load_documents("./library")  # .txt, .text, .md, .markdown, .pdf, .docx
+documents = load_documents("./library")  # .txt, .text, .md, .markdown, .html, .htm, .pdf, .docx
 ```
 
 `load_documents` accepts a file or a directory. Hidden files and folders are skipped, Markdown is reduced to its visible text, and document ids are paths relative to the directory. Text files may be up to 10 MiB and PDF or Word files up to 50 MiB.
+
+HTML files go through main-content extraction, and Markdown files can be split into one document per heading with `split_sections=True`. Web pages, front matter, and section splitting are described in [Web pages and Markdown](web.md).
 
 ## PDF
 

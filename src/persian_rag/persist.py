@@ -7,9 +7,9 @@ not re-embed the corpus. Query embedding still needs the same embedder.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from persian_rag.chunk import Chunk, ChunkingConfig
 from persian_rag.embeddings import Embedder, EmbedderSpec, create_embedder
@@ -17,6 +17,9 @@ from persian_rag.errors import IndexFormatError, IndexNotFoundError
 from persian_rag.normalize import NormalizeConfig
 from persian_rag.retrieval import HybridRetriever
 from persian_rag.version import INDEX_VERSION
+
+if TYPE_CHECKING:
+    from persian_rag.incremental import IndexManifest
 
 INDEX_FILENAME = "index.json"
 
@@ -31,6 +34,18 @@ class SavedIndex:
     chunking: ChunkingConfig
     chunks: list[Chunk]
     embeddings: list[list[float]]
+    documents: dict[str, Any] = field(default_factory=dict)
+    """Raw manifest (document hashes and chunk ids); empty for older files."""
+
+    def manifest(self) -> IndexManifest:
+        """Return the incremental-indexing manifest stored with the index."""
+
+        from persian_rag.incremental import IndexManifest
+
+        try:
+            return IndexManifest.from_dict(self.documents)
+        except ValueError as exc:
+            raise IndexFormatError(f"Invalid document manifest: {exc}") from exc
 
 
 def resolve_index_path(path: str | Path) -> Path:
@@ -47,8 +62,15 @@ def save_index(
     retriever: HybridRetriever,
     embedder_spec: EmbedderSpec,
     chunking: ChunkingConfig,
+    *,
+    manifest: IndexManifest | None = None,
 ) -> Path:
-    """Write ``retriever`` to ``path`` and return the file that was written."""
+    """Write ``retriever`` to ``path`` and return the file that was written.
+
+    ``manifest`` (from :class:`~persian_rag.incremental.IncrementalIndexer`)
+    is stored under ``documents`` so a later ``ingest --update`` can skip
+    unchanged files. Readers that do not know the key ignore it.
+    """
 
     chunks = retriever.chunks
     vectors = retriever.embeddings()
@@ -74,6 +96,8 @@ def save_index(
         "chunking": chunking.to_dict(),
         "chunks": records,
     }
+    if manifest is not None:
+        document["documents"] = manifest.to_dict()
     target = resolve_index_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -102,6 +126,7 @@ def load_index(path: str | Path) -> SavedIndex:
     normalize_raw = root.get("normalize")
     chunking_raw = root.get("chunking")
     chunk_raw = root.get("chunks")
+    documents_raw = root.get("documents")
     if not isinstance(embedder_raw, dict):
         raise IndexFormatError("Index is missing embedder settings")
     if not isinstance(normalize_raw, dict):
@@ -146,6 +171,7 @@ def load_index(path: str | Path) -> SavedIndex:
         chunking=chunking,
         chunks=chunks,
         embeddings=embeddings,
+        documents=cast(dict[str, Any], documents_raw) if isinstance(documents_raw, dict) else {},
     )
 
 

@@ -19,7 +19,9 @@ from persian_rag.retrieval import HybridRetriever, RetrievalMode, RetrievalResul
 from persian_rag.store import VectorStore
 
 if TYPE_CHECKING:
+    from persian_rag.citations import Citation
     from persian_rag.rerank import Reranker
+    from persian_rag.rewrite import QueryRewriter
 
 LLM = Callable[[str], str]
 AsyncLLM = Callable[[str], Awaitable[str]]
@@ -49,6 +51,22 @@ class RAGAnswer:
     answer: str
     prompt: str
     contexts: tuple[RetrievalResult, ...]
+    citations: tuple[Citation, ...] = ()
+    """Resolved ``[n]`` markers, filled when the pipeline has ``citations=True``."""
+    uncited: tuple[str, ...] = ()
+    """Answer sentences without a citation marker (``citations=True`` only)."""
+
+    def to_dict(self, *, include_prompt: bool = False) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "question": self.question,
+            "answer": self.answer,
+            "contexts": [item.to_dict() for item in self.contexts],
+            "citations": [item.to_dict() for item in self.citations],
+            "uncited": list(self.uncited),
+        }
+        if include_prompt:
+            payload["prompt"] = self.prompt
+        return payload
 
 
 class RAGPipeline:
@@ -58,6 +76,12 @@ class RAGPipeline:
     chunks (at least ``k``) and the reranker picks the final ``k``.
     ``llm`` may be a plain function or an ``async`` function; async models
     are supported by :meth:`aquery`.
+
+    With ``citations=True`` the default prompt asks the model to cite the
+    numbered contexts and :attr:`RAGAnswer.citations` maps each marker to a
+    source span (see :mod:`persian_rag.citations`). With a
+    ``query_rewriter`` every query variant is retrieved and the rankings are
+    fused (see :mod:`persian_rag.rewrite`).
     """
 
     def __init__(
@@ -65,12 +89,21 @@ class RAGPipeline:
         retriever: HybridRetriever,
         llm: LLM | AsyncLLM | None = None,
         *,
-        prompt_template: str = DEFAULT_PROMPT_FA,
+        prompt_template: str | None = None,
         context_template: str = "[{n}] {text}",
         separator: str = "\n\n",
         reranker: Reranker | None = None,
         rerank_candidates: int = 20,
+        citations: bool = False,
+        query_rewriter: QueryRewriter | None = None,
     ) -> None:
+        if prompt_template is None:
+            if citations:
+                from persian_rag.citations import CITATION_PROMPT_FA
+
+                prompt_template = CITATION_PROMPT_FA
+            else:
+                prompt_template = DEFAULT_PROMPT_FA
         _require_placeholders(prompt_template)
         if "{text}" not in context_template or "{n}" not in context_template:
             raise ValueError("context_template must contain {n} and {text}")
@@ -83,6 +116,8 @@ class RAGPipeline:
             raise ValueError("rerank_candidates must be >= 1")
         self.reranker = reranker
         self.rerank_candidates = rerank_candidates
+        self.citations = citations
+        self.query_rewriter = query_rewriter
 
     def build_prompt(self, question: str, contexts: Sequence[RetrievalResult]) -> str:
         """Fill the prompt template. Placeholders are replaced literally."""
@@ -119,19 +154,32 @@ class RAGPipeline:
 
         contexts = self.retrieve(question, k=k, mode=mode)
         prompt = self.build_prompt(question, contexts)
-        if self.llm is None:
-            answer = ""
-        else:
-            generated = self.llm(prompt)
-            if inspect.isawaitable(generated):
-                _close_awaitable(generated)
-                raise TypeError("The LLM is asynchronous; use aquery() instead of query()")
-            answer = _require_text(generated)
+        answer = self.generate(prompt)
+        return self.make_answer(question, answer, prompt, contexts)
+
+    def make_answer(
+        self,
+        question: str,
+        answer: str,
+        prompt: str,
+        contexts: Sequence[RetrievalResult],
+    ) -> RAGAnswer:
+        """Package a generated answer, resolving citations when enabled."""
+
+        citations: tuple[Citation, ...] = ()
+        uncited: tuple[str, ...] = ()
+        if self.citations and answer:
+            from persian_rag.citations import extract_citations
+
+            report = extract_citations(answer, contexts)
+            citations, uncited = report.citations, report.uncited
         return RAGAnswer(
             question=question,
             answer=answer,
             prompt=prompt,
             contexts=tuple(contexts),
+            citations=citations,
+            uncited=uncited,
         )
 
     def retrieve(
@@ -143,10 +191,27 @@ class RAGPipeline:
     ) -> list[RetrievalResult]:
         """Retrieve ``k`` chunks, reranking a larger pool when configured."""
 
+        if self.query_rewriter is not None:
+            from persian_rag.rewrite import RewritingRetriever
+
+            search: Any = RewritingRetriever(self.retriever, self.query_rewriter)
+        else:
+            search = self.retriever
         if self.reranker is None:
-            return self.retriever.retrieve(question, k=k, mode=mode)
-        pool = self.retriever.retrieve(question, k=max(k, self.rerank_candidates), mode=mode)
+            return list(search.retrieve(question, k=k, mode=mode))
+        pool = search.retrieve(question, k=max(k, self.rerank_candidates), mode=mode)
         return self.reranker.rerank(question, pool, top_k=k)
+
+    def generate(self, prompt: str) -> str:
+        """Call the synchronous LLM; return ``""`` when none is configured."""
+
+        if self.llm is None:
+            return ""
+        generated = self.llm(prompt)
+        if inspect.isawaitable(generated):
+            _close_awaitable(generated)
+            raise TypeError("The LLM is asynchronous; use aquery() instead of query()")
+        return _require_text(generated)
 
     async def aretrieve(
         self,
@@ -184,12 +249,7 @@ class RAGPipeline:
             if inspect.isawaitable(generated):
                 generated = await generated
             answer = _require_text(generated)
-        return RAGAnswer(
-            question=question,
-            answer=answer,
-            prompt=prompt,
-            contexts=tuple(contexts),
-        )
+        return self.make_answer(question, answer, prompt, contexts)
 
 
 def _is_async_callable(func: object) -> bool:

@@ -43,7 +43,7 @@ def test_ingest_and_query_roundtrip(tmp_path: Path, capsys: pytest.CaptureFixtur
     )
     assert status == 0
     captured = capsys.readouterr()
-    assert "Indexed 3 file" in captured.out
+    assert "Indexed 3 document" in captured.out
     stored = (index / "index.json").read_text(encoding="utf-8")
     assert "کتاب" in stored
     assert "کِتاب" not in stored

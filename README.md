@@ -7,7 +7,7 @@
 
 Persian-first retrieval-augmented generation for Python.
 
-persian-rag is a toolkit for building RAG systems over Farsi text. It normalizes Arabic and Persian characters, half-spaces, digits, and punctuation; loads text, Markdown, PDF, and Word files (repairing reversed PDF text); chunks and embeds passages; retrieves them with BM25, dense vectors, or both; reranks them; and measures the result. Generation is a function you supply, sync or async.
+persian-rag is a toolkit for building RAG systems over Farsi text. It normalizes Arabic and Persian characters, half-spaces, digits, and punctuation; loads text, Markdown, HTML, PDF, and Word files and web pages (extracting the main content and repairing reversed PDF text); chunks and embeds passages; keeps the index up to date incrementally; retrieves with BM25, dense vectors, or both, with Persian spelling-variant query expansion; reranks; answers with source citations and conversation memory; and measures the result. Generation is any function you supply, or the built-in OpenAI-compatible and Ollama adapters.
 
 The core install is pure Python with no dependencies. Every heavy piece (models, vector databases, parsers, the HTTP server) is an optional extra.
 
@@ -15,20 +15,26 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 ## خلاصه فارسی
 
-persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، PDF و Word را می خواند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند. نتیجه را با رتبه بندی دوباره بهتر می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ به تابعی سپرده می شود که خودتان می دهید و می تواند همگام یا ناهمگام باشد. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است.
+persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است.
 
 ## Features
 
 - **Normalization** for Persian: Arabic Yeh and Kaf, presentation forms, ZWNJ, digits, optional diacritics, and punctuation.
-- **Loaders** for `.txt`, `.md`, `.pdf`, and `.docx`. PDF text in visual (reversed) order is detected and repaired, presentation forms are folded, and bidi control marks are removed.
+- **Loaders** for `.txt`, `.md`, `.html`, `.pdf`, `.docx`, and web URLs. HTML goes through readability-style main-content extraction, Markdown front matter becomes metadata and files can be split by heading, and PDF text in visual (reversed) order is detected and repaired.
 - **Chunking**: fixed windows with overlap, sentence packing, and recursive separators.
 - **Embeddings** through a small protocol, with adapters for `sentence-transformers` and any OpenAI-compatible API, plus a persistent embedding cache.
-- **Vector stores**: in-memory, FAISS, Qdrant, and PostgreSQL with pgvector.
+- **Vector stores**: in-memory, FAISS, Qdrant, PostgreSQL with pgvector, and Elasticsearch or OpenSearch (which also serve BM25 for hybrid search, without a client package).
+- **Incremental indexing**: content hashes, upserts, and deletions, so only changed documents are re-embedded.
 - **Hybrid retrieval** with BM25 and [reciprocal rank fusion](https://plg.uwaterloo.ca/gvcormac/cormacksigir09-rrf.pdf), and an optional query result cache.
+- **Query rewriting** for Persian spelling variants (اتاق/اطاق, هیئت/هیات, مسئله/مساله), hamza and affix spacing forms, and optional LLM rewrites, fused with RRF.
 - **Reranking** with a cross-encoder (default `BAAI/bge-reranker-v2-m3`) or any LLM (listwise).
+- **Citations**: answers with `[n]` markers resolved to quoted source spans and character offsets, and a list of uncited claims.
+- **Chat**: conversation memory and follow-up question condensing, in Python, the CLI, and the HTTP API.
+- **LLM adapters** for OpenAI-compatible servers and Ollama, with retries, using only the standard library.
 - **Evaluation**: hit rate, MRR, recall, and nDCG at several cut-offs, plus pluggable answer faithfulness scorers.
 - **Async**: `aretrieve` and `aquery`, with native support for `async` model functions.
-- **HTTP API** built on FastAPI, and a CLI for `ingest`, `query`, `eval`, and `serve`.
+- **HTTP API** built on FastAPI, and a CLI for `ingest`, `query`, `chat`, `eval`, and `serve`.
+- **Benchmarks**: an offline Persian retrieval benchmark with published numbers.
 - Fully typed (`mypy --strict`), tested offline, MIT licensed.
 
 ## Installation
@@ -55,7 +61,7 @@ Pick the extras you need:
 pip install "persian-rag[pdf,docx,qdrant,server]"
 ```
 
-Requires Python 3.10 or newer. The OpenAI-compatible adapters use only the standard library: set `OPENAI_API_KEY`, and `OPENAI_BASE_URL` for compatible servers.
+Requires Python 3.10 or newer. The OpenAI-compatible and Ollama adapters, the web loaders, and the Elasticsearch and OpenSearch stores use only the standard library: set `OPENAI_API_KEY` (and `OPENAI_BASE_URL` for compatible servers) or `OLLAMA_HOST`.
 
 ## Quick start
 
@@ -122,6 +128,17 @@ Many PDF generators store Persian lines in visual order, so extracted words come
 
 Word documents keep paragraphs and tables in body order; table rows become `cell | cell` lines.
 
+### Web pages and Markdown
+
+```python
+from persian_rag import load_markdown, load_url
+
+page = load_url("https://example.com/fa/article")  # main content only, id is the URL
+sections = load_markdown("guide.md", split_sections=True)  # ids like "guide.md#نصب"
+```
+
+`load_documents` also reads `.html` files, and `persian-rag ingest` accepts URLs. Navigation, footers, comments, share bars, and hidden elements are removed; `<article>` and `<main>` are preferred when present.
+
 ### Retrieval and reranking
 
 ```python
@@ -142,6 +159,32 @@ The retriever fetches `rerank_candidates` chunks and the reranker keeps the best
 
 Hybrid scores are reciprocal rank fusion. Dense mode returns the store score; sparse mode returns Okapi BM25.
 
+### Query rewriting
+
+```python
+from persian_rag import QueryRewriter
+
+pipeline = RAGPipeline(retriever, my_llm, query_rewriter=QueryRewriter())
+QueryRewriter().variants("اطاق پنج دری")  # ['اطاق پنج دری', 'اتاق پنج دری']
+```
+
+Each variant is searched and the rankings are fused with RRF, with the original query weighted double. Pass `llm=` to add model-written rewrites. On the bundled benchmark this lifts BM25 Hit@1 from 0.881 to 0.952.
+
+### Citations and chat
+
+```python
+from persian_rag import ChatSession, OllamaLLM, RAGPipeline
+
+pipeline = RAGPipeline(retriever, OllamaLLM(model="qwen2.5:7b"), citations=True)
+answer = pipeline.query("حافظ اهل کجا بود؟")
+for c in answer.citations:
+    print(c.marker, c.document_id, c.quote, c.start, c.end)
+
+chat = ChatSession(pipeline)
+chat.ask("حافظ اهل کجا بود؟")
+chat.ask("آرامگاهش کجاست؟")  # rewritten to a standalone question before retrieval
+```
+
 ### Vector stores
 
 ```python
@@ -160,7 +203,17 @@ pg = PgVectorStore(
 retriever = build_retriever(texts, embedder, store=qdrant)
 ```
 
-All stores share one protocol (`add`, `search`, `__len__`); Qdrant and pgvector also support `delete`. Scores are always larger-is-closer.
+All stores share one protocol (`add`, `search`, `__len__`); all but FAISS also support `delete`. Scores are always larger-is-closer.
+
+```python
+from persian_rag import HybridRetriever, IncrementalIndexer, load_documents
+from persian_rag.vectorstores import OpenSearchStore
+
+store = OpenSearchStore("http://localhost:9200", "persian_docs")
+retriever = HybridRetriever(embedder, store=store, sparse_backend=store)  # BM25 runs in OpenSearch
+report = IncrementalIndexer(retriever).sync(load_documents("./library"))
+print(report.summary())  # added 3, updated 1, deleted 0, unchanged 40 document(s); ...
+```
 
 ### Caching and async
 
@@ -199,18 +252,34 @@ from persian_rag.server import create_app
 uvicorn.run(create_app(pipeline), host="127.0.0.1", port=8000)
 ```
 
-Endpoints: `GET /health`, `POST /retrieve` (`{"query": "...", "k": 5, "mode": "hybrid"}`), and `POST /query` (`{"question": "...", "k": 5}`). Interactive docs are served at `/docs`.
+Endpoints: `GET /health`, `POST /retrieve` (`{"query": "...", "k": 5, "mode": "hybrid"}`), `POST /query` (`{"question": "...", "k": 5}`), `POST /chat` (`{"message": "...", "session_id": null}`), and `DELETE /chat/{session_id}`. Answers include `citations` when the pipeline has `citations=True`. Interactive docs are served at `/docs`.
 
 ### Command line
 
 ```bash
-persian-rag ingest ./library --index .persian-rag --embedding-cache .cache/emb.sqlite
+persian-rag ingest ./library https://example.com/post --index .persian-rag --embedding-cache .cache/emb.sqlite
+persian-rag ingest ./library --index .persian-rag --update
 persian-rag query "حافظ اهل کجا بود؟" --index .persian-rag --json
+persian-rag query "اطاق پنج دری" --expand rules --llm ollama --citations
+persian-rag chat --index .persian-rag --llm openai
 persian-rag eval eval.jsonl --index .persian-rag --k 1 3 5 10
 persian-rag serve --index .persian-rag --port 8000
 ```
 
-`ingest` reads `.txt`, `.md`, `.pdf`, and `.docx`, skips hidden files, and writes a UTF-8 JSON index without API keys. Useful flags: `--embedder hashing|sentence-transformers|openai`, `--strategy`, `--chunk-size`, `--rtl-fix`, `--split-pages`, `--mode`, `--rerank cross-encoder|llm`, `--llm openai`, and `--prompt-lang fa|en`. Run `persian-rag <command> --help` for the rest.
+`ingest` reads `.txt`, `.md`, `.html`, `.pdf`, `.docx`, and URLs, skips hidden files, and writes a UTF-8 JSON index without API keys. Useful flags: `--embedder hashing|sentence-transformers|openai`, `--strategy`, `--chunk-size`, `--rtl-fix`, `--split-pages`, `--split-sections`, `--update`, `--mode`, `--expand rules|llm`, `--rerank cross-encoder|llm`, `--llm openai|ollama`, `--citations`, and `--prompt-lang fa|en`. Run `persian-rag <command> --help` for the rest.
+
+## Benchmarks
+
+`python benchmarks/run_benchmark.py` scores sparse, dense, and hybrid retrieval, with and without query rewriting, on a bundled set of 34 Persian documents and 42 questions. It runs offline. Results for 0.3.0 with the hashing embedder:
+
+| Configuration | Hit@1 | MRR@10 | Hit@1 on spelling variants |
+|---|---:|---:|---:|
+| sparse | 0.881 | 0.881 | 0.583 |
+| sparse + rewrite | 0.952 | 0.964 | 0.833 |
+| hybrid | 0.952 | 0.964 | 0.833 |
+| hybrid + rewrite | 0.952 | 0.964 | 0.833 |
+
+Full table, latency, and method: [Benchmarks](https://sadrmanesh.github.io/persian-rag/benchmarks/).
 
 ## Documentation
 
@@ -231,17 +300,16 @@ mypy src
 pytest
 ```
 
-Tests run offline. Optional-dependency tests skip when the extra is missing. The pgvector integration test runs when `PERSIAN_RAG_PG_DSN` points at PostgreSQL with the `vector` extension, and heavy model tests run with `PERSIAN_RAG_RUN_HEAVY=1`.
+Tests run offline. Optional-dependency tests skip when the extra is missing. The pgvector integration test runs when `PERSIAN_RAG_PG_DSN` points at PostgreSQL with the `vector` extension, the search engine tests run with `PERSIAN_RAG_ES_URL` or `PERSIAN_RAG_OPENSEARCH_URL`, and heavy model tests run with `PERSIAN_RAG_RUN_HEAVY=1`.
 
 Releases are published to PyPI by the `Release` workflow when a `v*` tag is pushed, using trusted publishing (repository variable `PYPI_TRUSTED_PUBLISHING=true`) or a `PYPI_API_TOKEN` secret. Without either, the build still runs and publishing is skipped.
 
 ## Roadmap
 
 - Morphological normalization for Persian clitics beyond the affix list.
-- OpenSearch and other durable store connectors.
-- HTML loading and incremental re-indexing of changed files.
-- Citation-style answers with span-level grounding.
-- Evaluation recipes for public Persian QA datasets.
+- Search engine stores from the command line, and more durable store connectors.
+- Streaming answers in the HTTP API.
+- Evaluation recipes for public Persian QA datasets and semantic embedding baselines in the benchmark.
 
 ## Contributing
 
