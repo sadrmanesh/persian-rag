@@ -1,4 +1,4 @@
-"""Command line interface: ingest, query, eval, and serve."""
+"""Command line interface: ingest, query, chat, eval, and serve."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import os
 import sys
 from contextlib import ExitStack
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from persian_rag.chunk import ChunkingConfig, ChunkStrategy
 from persian_rag.documents import load_documents
@@ -21,19 +21,23 @@ from persian_rag.embeddings import (
     create_embedder,
 )
 from persian_rag.errors import ConfigError, MissingDependencyError, PersianRagError
+from persian_rag.incremental import IncrementalIndexer, IndexManifest
 from persian_rag.normalize import DigitStyle, NormalizeConfig, ZwnjMode
-from persian_rag.persist import load_index, retriever_from_saved, save_index
-from persian_rag.pipeline import DEFAULT_PROMPT_EN, DEFAULT_PROMPT_FA, RAGPipeline, build_retriever
-from persian_rag.remote import make_openai_llm
+from persian_rag.persist import load_index, resolve_index_path, retriever_from_saved, save_index
+from persian_rag.pipeline import DEFAULT_PROMPT_EN, DEFAULT_PROMPT_FA, RAGAnswer, RAGPipeline
 from persian_rag.rerank import CrossEncoderReranker, LLMReranker, Reranker
-from persian_rag.retrieval import RetrievalMode
+from persian_rag.retrieval import HybridRetriever, RetrievalMode
 from persian_rag.version import __version__
 
 if TYPE_CHECKING:
+    from persian_rag.chat import CondenseMode
+    from persian_rag.documents import SourceDocument
+    from persian_rag.llm import OllamaLLM, OpenAICompatibleLLM
     from persian_rag.loaders import RtlFix
 
 _DEFAULT_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 _DEFAULT_OPENAI_CHAT_MODEL = "gpt-4o-mini"
+_DEFAULT_OLLAMA_MODEL = "qwen2.5:7b"
 _DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
 
@@ -63,7 +67,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     ingest = commands.add_parser("ingest", help="Index a file or a directory of documents")
     ingest.add_argument(
-        "path", type=Path, help="File or directory of .txt, .md, .pdf, and .docx files"
+        "path",
+        nargs="+",
+        help="Files, directories (.txt, .md, .html, .pdf, .docx), or http(s) URLs",
     )
     ingest.add_argument(
         "--index",
@@ -120,6 +126,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--split-pages", action="store_true", help="Index each PDF page as its own document"
     )
     ingest.add_argument(
+        "--split-sections",
+        action="store_true",
+        help="Index each Markdown section as its own document",
+    )
+    ingest.add_argument(
+        "--html-extract",
+        choices=("main", "all"),
+        default="main",
+        help="Keep only the main content of HTML pages (default) or all text",
+    )
+    ingest.add_argument(
+        "--update",
+        action="store_true",
+        help="Update an existing index: re-embed only new or changed documents",
+    )
+    ingest.add_argument(
+        "--keep-missing",
+        action="store_true",
+        help="With --update, keep documents that are no longer in the input",
+    )
+    ingest.add_argument(
         "--embedding-cache",
         type=Path,
         default=None,
@@ -135,6 +162,19 @@ def build_parser() -> argparse.ArgumentParser:
     query.add_argument("--json", action="store_true", help="Print the result as JSON")
     query.add_argument("--show-prompt", action="store_true")
     query.set_defaults(func=_cmd_query)
+
+    chat = commands.add_parser("chat", help="Ask follow-up questions in an interactive session")
+    _add_pipeline_arguments(chat)
+    chat.add_argument("--k", type=int, default=5)
+    chat.add_argument("--mode", choices=("hybrid", "dense", "sparse"), default="hybrid")
+    chat.add_argument("--max-turns", type=int, default=6, help="Turns kept in memory")
+    chat.add_argument(
+        "--condense",
+        choices=("auto", "llm", "heuristic", "none"),
+        default="auto",
+        help="How follow-ups become standalone search queries",
+    )
+    chat.set_defaults(func=_cmd_chat)
 
     evaluate = commands.add_parser("eval", help="Measure retrieval and answer quality")
     evaluate.add_argument("dataset", type=Path, help="JSONL file of labelled questions")
@@ -173,10 +213,31 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _add_pipeline_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--index", type=Path, default=Path(".persian-rag"))
-    parser.add_argument("--llm", choices=("none", "openai"), default="none")
-    parser.add_argument("--llm-model", default=_DEFAULT_OPENAI_CHAT_MODEL)
+    parser.add_argument("--llm", choices=("none", "openai", "ollama"), default="none")
+    parser.add_argument(
+        "--llm-model",
+        default=None,
+        help=f"Chat model (default: {_DEFAULT_OPENAI_CHAT_MODEL} or {_DEFAULT_OLLAMA_MODEL})",
+    )
+    parser.add_argument("--llm-max-tokens", type=int, default=None)
     parser.add_argument("--base-url", default=None)
+    parser.add_argument(
+        "--ollama-url",
+        default=None,
+        help="Ollama server (default: env OLLAMA_HOST or http://localhost:11434)",
+    )
     parser.add_argument("--prompt-lang", choices=("fa", "en"), default="fa")
+    parser.add_argument(
+        "--citations",
+        action="store_true",
+        help="Ask the model to cite sources and resolve [n] markers to spans",
+    )
+    parser.add_argument(
+        "--expand",
+        choices=("none", "rules", "llm"),
+        default="none",
+        help="Search spelling variants of the query; llm also asks the model for rewrites",
+    )
     parser.add_argument(
         "--rerank",
         choices=("none", "cross-encoder", "llm"),
@@ -187,34 +248,68 @@ def _add_pipeline_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--rerank-candidates", type=int, default=20)
 
 
-def _cmd_ingest(args: argparse.Namespace) -> int:
-    documents = load_documents(
-        args.path,
-        rtl_fix=cast("RtlFix", _choice(args.rtl_fix, ("auto", "reverse", "none"), "rtl-fix")),
-        split_pages=bool(args.split_pages),
+def _load_inputs(args: argparse.Namespace) -> list[SourceDocument]:
+    from persian_rag.web import load_url
+
+    rtl_fix = cast("RtlFix", _choice(args.rtl_fix, ("auto", "reverse", "none"), "rtl-fix"))
+    html_extract: Literal["main", "all"] = (
+        "all" if _choice(args.html_extract, ("main", "all"), "html-extract") == "all" else "main"
     )
-    normalize_config = _normalize_from_args(args)
-    chunking = _chunking_from_args(args)
-    embedder = _embedder_from_args(args)
+    documents: list[SourceDocument] = []
+    for raw in args.path:
+        source = str(raw)
+        if source.startswith(("http://", "https://")):
+            documents.extend(load_url(source, extract=html_extract))
+            continue
+        documents.extend(
+            load_documents(
+                Path(source),
+                rtl_fix=rtl_fix,
+                split_pages=bool(args.split_pages),
+                split_sections=bool(args.split_sections),
+                html_extract=html_extract,
+            )
+        )
+    return documents
+
+
+def _cmd_ingest(args: argparse.Namespace) -> int:
+    documents = _load_inputs(args)
+    target = resolve_index_path(args.index)
     with ExitStack() as stack:
-        indexing_embedder: Embedder = embedder
-        if args.embedding_cache is not None:
+
+        def cached(model: Embedder) -> Embedder:
+            if args.embedding_cache is None:
+                return model
             from persian_rag.cache import CachedEmbedder, SQLiteEmbeddingCache
 
             cache = stack.enter_context(SQLiteEmbeddingCache(args.embedding_cache))
-            indexing_embedder = CachedEmbedder(embedder, cache)
-        retriever = build_retriever(
-            [document.text for document in documents],
-            indexing_embedder,
-            document_ids=[document.id for document in documents],
-            metadatas=[document.metadata for document in documents],
-            normalize_config=normalize_config,
-            chunking=chunking,
-        )
+            return CachedEmbedder(model, cache)
+
+        if bool(args.update) and target.is_file():
+            saved = load_index(target)
+            spec = _spec_with_base_url(saved.embedder, args.base_url)
+            retriever = retriever_from_saved(saved, cached(create_embedder(spec)))
+            manifest = saved.manifest() if saved.documents else None
+            indexer = IncrementalIndexer(retriever, chunking=saved.chunking, manifest=manifest)
+            report = indexer.sync(documents, delete_missing=not bool(args.keep_missing))
+            embedder_spec = saved.embedder
+            chunking = saved.chunking
+        else:
+            chunking = _chunking_from_args(args)
+            embedder = _embedder_from_args(args)
+            retriever = HybridRetriever(
+                cached(embedder), normalize_config=_normalize_from_args(args)
+            )
+            indexer = IncrementalIndexer(retriever, chunking=chunking, manifest=IndexManifest())
+            report = indexer.sync(documents)
+            embedder_spec = embedder.to_spec()
     if len(retriever) == 0:
         raise PersianRagError("No chunks were produced from the input")
-    target = save_index(args.index, retriever, embedder.to_spec(), chunking)
-    print(f"Indexed {len(documents)} file(s), {len(retriever)} chunk(s) -> {target}")
+    written = save_index(target, retriever, embedder_spec, chunking, manifest=indexer.manifest)
+    if bool(args.update):
+        print(f"Updated index: {report.summary()}")
+    print(f"Indexed {len(indexer.manifest)} document(s), {len(retriever)} chunk(s) -> {written}")
     return 0
 
 
@@ -223,13 +318,7 @@ def _build_pipeline(args: argparse.Namespace) -> RAGPipeline:
     spec = _spec_with_base_url(saved.embedder, args.base_url)
     embedder = create_embedder(spec)
     retriever = retriever_from_saved(saved, embedder)
-    llm = None
-    if args.llm == "openai":
-        llm = make_openai_llm(
-            model=_optional_str(args.llm_model) or _DEFAULT_OPENAI_CHAT_MODEL,
-            api_key=os.environ.get("OPENAI_API_KEY", ""),
-            base_url=_base_url(args.base_url),
-        )
+    llm = _llm_from_args(args)
     reranker: Reranker | None = None
     rerank = _choice(args.rerank, ("none", "cross-encoder", "llm"), "rerank")
     if rerank == "cross-encoder":
@@ -237,34 +326,71 @@ def _build_pipeline(args: argparse.Namespace) -> RAGPipeline:
         reranker = CrossEncoderReranker(model) if model else CrossEncoderReranker()
     elif rerank == "llm":
         if llm is None:
-            raise ConfigError("--rerank llm needs --llm openai")
+            raise ConfigError("--rerank llm needs --llm openai or --llm ollama")
         reranker = LLMReranker(llm)
-    template = DEFAULT_PROMPT_FA if args.prompt_lang == "fa" else DEFAULT_PROMPT_EN
+    citations = bool(args.citations)
+    if citations:
+        from persian_rag.citations import CITATION_PROMPT_EN, CITATION_PROMPT_FA
+
+        template = CITATION_PROMPT_FA if args.prompt_lang == "fa" else CITATION_PROMPT_EN
+    else:
+        template = DEFAULT_PROMPT_FA if args.prompt_lang == "fa" else DEFAULT_PROMPT_EN
+    rewriter = None
+    expand = _choice(args.expand, ("none", "rules", "llm"), "expand")
+    if expand != "none":
+        from persian_rag.rewrite import QueryRewriter
+
+        if expand == "llm" and llm is None:
+            raise ConfigError("--expand llm needs --llm openai or --llm ollama")
+        rewriter = QueryRewriter(llm=llm if expand == "llm" else None)
     return RAGPipeline(
         retriever,
         llm,
         prompt_template=template,
         reranker=reranker,
         rerank_candidates=int(args.rerank_candidates),
+        citations=citations,
+        query_rewriter=rewriter,
     )
+
+
+def _llm_from_args(args: argparse.Namespace) -> OpenAICompatibleLLM | OllamaLLM | None:
+    from persian_rag.llm import create_llm
+
+    provider = _choice(args.llm, ("none", "openai", "ollama"), "llm")
+    max_tokens = args.llm_max_tokens
+    if max_tokens is not None and (not isinstance(max_tokens, int) or max_tokens < 1):
+        raise ConfigError("--llm-max-tokens must be a positive integer")
+    model = _optional_str(args.llm_model)
+    if provider == "openai":
+        return create_llm(
+            "openai",
+            model=model or _DEFAULT_OPENAI_CHAT_MODEL,
+            base_url=_base_url(args.base_url),
+            api_key=os.environ.get("OPENAI_API_KEY", ""),
+            max_tokens=max_tokens,
+        )
+    if provider == "ollama":
+        return create_llm(
+            "ollama",
+            model=model or _DEFAULT_OLLAMA_MODEL,
+            base_url=_optional_str(args.ollama_url),
+            max_tokens=max_tokens,
+        )
+    return None
 
 
 def _cmd_query(args: argparse.Namespace) -> int:
     pipeline = _build_pipeline(args)
     answer = pipeline.query(str(args.question), k=int(args.k), mode=_mode_from_args(args))
     if bool(args.json):
-        payload: dict[str, object] = {
-            "question": answer.question,
-            "answer": answer.answer,
-            "contexts": [item.to_dict() for item in answer.contexts],
-        }
-        if bool(args.show_prompt):
-            payload["prompt"] = answer.prompt
+        payload = answer.to_dict(include_prompt=bool(args.show_prompt))
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
 
     if answer.answer:
         print(answer.answer)
+        _print_citations(answer)
     else:
         print("(no LLM configured; showing retrieved context)")
     print()
@@ -278,6 +404,59 @@ def _cmd_query(args: argparse.Namespace) -> int:
         print("--- prompt ---")
         print(answer.prompt)
     return 0
+
+
+def _print_citations(answer: RAGAnswer) -> None:
+    if not answer.citations and not answer.uncited:
+        return
+    from persian_rag.citations import CitationReport, format_sources
+
+    report = CitationReport(answer.citations, answer.uncited, ())
+    print()
+    print("Sources:")
+    print(format_sources(report) or "(none)")
+    for sentence in answer.uncited:
+        print(f"! no citation: {sentence}")
+
+
+def _cmd_chat(args: argparse.Namespace) -> int:
+    from persian_rag.chat import ChatSession, ConversationMemory
+
+    pipeline = _build_pipeline(args)
+    condense = _choice(args.condense, ("auto", "llm", "heuristic", "none"), "condense")
+    session = ChatSession(
+        pipeline,
+        memory=ConversationMemory(int(args.max_turns)),
+        condense=cast("CondenseMode", condense),
+    )
+    print("persian-rag chat. Type /reset to start over, /exit to quit.")
+    if pipeline.llm is None:
+        print("(no LLM configured; showing retrieved context)")
+    while True:
+        try:
+            line = input("> ").strip()
+        except EOFError:
+            print()
+            return 0
+        if not line:
+            continue
+        if line in {"/exit", "/quit"}:
+            return 0
+        if line == "/reset":
+            session.reset()
+            print("(conversation cleared)")
+            continue
+        reply = session.ask(line, k=int(args.k), mode=_mode_from_args(args))
+        if reply.standalone_question != line:
+            print(f"(searching: {reply.standalone_question})")
+        answer = reply.answer
+        if answer.answer:
+            print(answer.answer)
+            _print_citations(answer)
+        else:
+            for index, item in enumerate(answer.contexts, start=1):
+                print(f"[{index}] {item.document_id}: {' '.join(item.text.split())[:200]}")
+        print()
 
 
 def _cmd_eval(args: argparse.Namespace) -> int:
@@ -306,7 +485,7 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     answers = None
     if bool(args.answers):
         if pipeline.llm is None:
-            raise ConfigError("--answers needs --llm openai")
+            raise ConfigError("--answers needs --llm openai or --llm ollama")
         scorer: FaithfulnessScorer = TokenOverlapFaithfulness()
         if args.judge == "llm":
             llm = pipeline.llm
