@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-sadrmanesh.github.io-009688)](https://sadrmanesh.github.io/persian-rag/)
+[![Hugging Face Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo)
 
 Persian-first retrieval-augmented generation for Python.
 
@@ -13,9 +14,11 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 **Documentation:** <https://sadrmanesh.github.io/persian-rag/> in English and Persian. The sources live in [`docs/`](docs/) and build with MkDocs (see [Documentation](#documentation)).
 
+**Live demo:** [persian-rag on Hugging Face Spaces](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) runs normalization and retrieval in the browser. **Benchmark dataset:** [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub.
+
 ## خلاصه فارسی
 
-persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. سرور HTTP به صورت ایمیج داکر `ghcr.io/sadrmanesh/persian-rag` هم منتشر می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است.
+persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. سرور HTTP به صورت ایمیج داکر `ghcr.io/sadrmanesh/persian-rag` هم منتشر می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است. [نسخه نمایشی زنده](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) در Hugging Face Spaces و [مجموعه داده محک](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) در Hugging Face Hub هم در دسترس هستند.
 
 ## Features
 
@@ -291,7 +294,7 @@ persian-rag serve --index .persian-rag --port 8000
 | hybrid | 0.952 | 0.964 | 0.833 |
 | hybrid + rewrite | 0.952 | 0.964 | 0.833 |
 
-Full table, latency, and method: [Benchmarks](https://sadrmanesh.github.io/persian-rag/benchmarks/).
+Full table, latency, and method: [Benchmarks](https://sadrmanesh.github.io/persian-rag/benchmarks/). The same corpus and questions are on the Hugging Face Hub as [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench).
 
 ## Documentation
 

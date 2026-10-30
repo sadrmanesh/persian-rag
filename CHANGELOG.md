@@ -7,6 +7,7 @@ All notable changes to persian-rag are documented here. The format is based on [
 ### Added
 
 - An optional Docker Hub job in the release workflow. When the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets are set, it copies the released GHCR image to `docker.io/<username>/persian-rag` with the same tags. Without them it skips.
+- Links to the [live demo](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) on Hugging Face Spaces and the [benchmark dataset](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub in the README and docs, with a Spaces badge.
 - `.github/workflows/mirror.yml`, which mirrors `main` and tags to `gitlab.com/sadrmanesh/persian-rag` when the `GITLAB_TOKEN` secret is set, and skips cleanly otherwise.
 
 ## [0.3.1] - 2026-10-30

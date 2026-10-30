@@ -17,6 +17,11 @@ persian-rag turns a folder of Persian documents into a searchable index and a qu
 
 The core package has no dependencies. Heavy pieces are optional extras, so you install only what you use.
 
+## Try it
+
+- **Live demo:** [persian-rag on Hugging Face Spaces](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) runs normalization and BM25, dense, and hybrid retrieval in the browser, with no install.
+- **Benchmark dataset:** [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub, loadable with `datasets.load_dataset`.
+
 ## Where to start
 
 - New here? Read [Getting started](getting-started.md).
