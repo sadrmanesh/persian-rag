@@ -2,6 +2,20 @@
 
 All notable changes to persian-rag are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-10-30
+
+### Added
+
+- A production `Dockerfile` for the HTTP API. The image installs `persian-rag[server,pdf,docx]` on Python 3.12 from a wheel built in a separate stage, runs as a non-root user, serves `/data/index` on port 8000, and has a health check on `GET /health`. The `EXTRAS` build argument adds other extras, such as `sentence-transformers`.
+- A `.dockerignore` that keeps tests, docs, caches, and local indexes out of the build context.
+- The release workflow publishes the image to the GitHub Container Registry as `ghcr.io/sadrmanesh/persian-rag` for `linux/amd64` and `linux/arm64`, tagged `X.Y.Z`, `X.Y`, and `latest`, with OCI labels that link it to this repository.
+- CI builds the image, indexes a sample document inside it, checks `/health` and `/retrieve`, waits for the health check to report healthy, and checks that the container does not run as root.
+- A Docker page in English and Persian, and Docker sections in the README, the HTTP API page, and the release guide.
+
+### Changed
+
+- The package version is now 0.3.1.
+
 ## [0.3.0] - 2026-10-30
 
 ### Added
@@ -64,5 +78,7 @@ All notable changes to persian-rag are documented here. The format is based on [
 - `persian-rag ingest` and `persian-rag query` commands, plus a JSON index.
 - Unit tests, Ruff, mypy, and a GitHub Actions workflow.
 
+[0.3.1]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.3.1
+[0.3.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.2.0
 [0.1.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.1.0

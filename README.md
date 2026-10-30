@@ -15,7 +15,7 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 ## خلاصه فارسی
 
-persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است.
+persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. سرور HTTP به صورت ایمیج داکر `ghcr.io/sadrmanesh/persian-rag` هم منتشر می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است.
 
 ## Features
 
@@ -60,6 +60,18 @@ Pick the extras you need:
 ```bash
 pip install "persian-rag[pdf,docx,qdrant,server]"
 ```
+
+### Docker
+
+Every release publishes the HTTP API as a multi-architecture image (`linux/amd64`, `linux/arm64`) on the GitHub Container Registry, with the `server`, `pdf`, and `docx` extras installed:
+
+```bash
+docker run --rm -v "$PWD/library:/library:ro" -v persian-rag-data:/data \
+  ghcr.io/sadrmanesh/persian-rag:0.3.1 ingest /library --index /data/index
+docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.3.1
+```
+
+Tags are `X.Y.Z`, `X.Y`, and `latest`. The container runs as a non-root user and has a health check on `/health`. See [Docker](https://sadrmanesh.github.io/persian-rag/docker/) for language models, custom extras, and building the image yourself.
 
 Requires Python 3.10 or newer. The OpenAI-compatible and Ollama adapters, the web loaders, and the Elasticsearch and OpenSearch stores use only the standard library: set `OPENAI_API_KEY` (and `OPENAI_BASE_URL` for compatible servers) or `OLLAMA_HOST`.
 
@@ -252,7 +264,7 @@ from persian_rag.server import create_app
 uvicorn.run(create_app(pipeline), host="127.0.0.1", port=8000)
 ```
 
-Endpoints: `GET /health`, `POST /retrieve` (`{"query": "...", "k": 5, "mode": "hybrid"}`), `POST /query` (`{"question": "...", "k": 5}`), `POST /chat` (`{"message": "...", "session_id": null}`), and `DELETE /chat/{session_id}`. Answers include `citations` when the pipeline has `citations=True`. Interactive docs are served at `/docs`.
+Endpoints: `GET /health`, `POST /retrieve` (`{"query": "...", "k": 5, "mode": "hybrid"}`), `POST /query` (`{"question": "...", "k": 5}`), `POST /chat` (`{"message": "...", "session_id": null}`), and `DELETE /chat/{session_id}`. Answers include `citations` when the pipeline has `citations=True`. Interactive docs are served at `/docs`. The same API ships as the `ghcr.io/sadrmanesh/persian-rag` Docker image (see [Docker](#docker)).
 
 ### Command line
 
@@ -302,7 +314,7 @@ pytest
 
 Tests run offline. Optional-dependency tests skip when the extra is missing. The pgvector integration test runs when `PERSIAN_RAG_PG_DSN` points at PostgreSQL with the `vector` extension, the search engine tests run with `PERSIAN_RAG_ES_URL` or `PERSIAN_RAG_OPENSEARCH_URL`, and heavy model tests run with `PERSIAN_RAG_RUN_HEAVY=1`.
 
-Releases are published to PyPI by the `Release` workflow when a `v*` tag is pushed, using trusted publishing (repository variable `PYPI_TRUSTED_PUBLISHING=true`) or a `PYPI_API_TOKEN` secret. Without either, the build still runs and publishing is skipped.
+Releases are published to PyPI by the `Release` workflow when a `v*` tag is pushed, using trusted publishing (repository variable `PYPI_TRUSTED_PUBLISHING=true`) or a `PYPI_API_TOKEN` secret. Without either, the build still runs and publishing is skipped. The same workflow pushes the Docker image to `ghcr.io/sadrmanesh/persian-rag` with the workflow's `GITHUB_TOKEN`.
 
 ## Roadmap
 
