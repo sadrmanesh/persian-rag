@@ -12,6 +12,15 @@ python benchmarks/run_benchmark.py --json results.json
 python benchmarks/run_benchmark.py --embedder sentence-transformers --model intfloat/multilingual-e5-small
 ```
 
+The corpus and questions are also published on the Hugging Face Hub as [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench), and the [live demo](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) searches the same corpus:
+
+```python
+from datasets import load_dataset
+
+corpus = load_dataset("sadrmanesh/persian-rag-bench", "corpus", split="test")
+qa = load_dataset("sadrmanesh/persian-rag-bench", "qa", split="test")
+```
+
 ## Results
 
 persian-rag 0.3.0, Python 3.12, hashing embedder (512 dimensions, character 2 to 4 grams), chunks of 400 characters, `k=10`. Hit@k is the share of questions with a relevant document in the top k; MRR and nDCG use document matching. Latency is one `retrieve` call on an 8-core Linux machine, median and 95th percentile over five rounds.

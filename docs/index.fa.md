@@ -17,6 +17,11 @@ persian-rag پوشه ای از اسناد فارسی را به یک نمایه �
 
 بسته اصلی هیچ وابستگی ندارد. بخش های سنگین به صورت افزونه اختیاری نصب می شوند تا فقط چیزی را نصب کنید که لازم دارید.
 
+## امتحان کنید
+
+- **نسخه نمایشی زنده:** [persian-rag در Hugging Face Spaces](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) یکدست سازی متن و بازیابی با BM25، بردارها و روش ترکیبی را بدون نصب و در مرورگر اجرا می کند.
+- **مجموعه داده محک:** [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) در Hugging Face Hub که با `datasets.load_dataset` بارگذاری می شود.
+
 ## از کجا شروع کنیم
 
 - اگر تازه کار هستید، [شروع کار](getting-started.md) را بخوانید.

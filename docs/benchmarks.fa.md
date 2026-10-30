@@ -12,6 +12,15 @@ python benchmarks/run_benchmark.py --json results.json
 python benchmarks/run_benchmark.py --embedder sentence-transformers --model intfloat/multilingual-e5-small
 ```
 
+پیکره و پرسش ها در Hugging Face Hub هم با نام [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) منتشر شده اند و [نسخه نمایشی زنده](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) روی همین پیکره جست و جو می کند:
+
+```python
+from datasets import load_dataset
+
+corpus = load_dataset("sadrmanesh/persian-rag-bench", "corpus", split="test")
+qa = load_dataset("sadrmanesh/persian-rag-bench", "qa", split="test")
+```
+
 ## نتیجه ها
 
 نسخه 0.3.0، پایتون 3.12، بردارساز درهم سازی (۵۱۲ بعد، n-gram های ۲ تا ۴ نویسه ای)، تکه های ۴۰۰ نویسه ای و `k=10`. معیار Hit@k سهم پرسش هایی است که سند مرتبط در k نتیجه نخست آنها هست. MRR و nDCG بر پایه سند حساب می شوند. تاخیر زمان یک فراخوانی `retrieve` روی یک ماشین لینوکس ۸ هسته ای است (میانه و صدک ۹۵ در پنج دور).
