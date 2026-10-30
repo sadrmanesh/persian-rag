@@ -3,6 +3,7 @@
 [![CI](https://github.com/sadrmanesh/persian-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/sadrmanesh/persian-rag/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-sadrmanesh.github.io-009688)](https://sadrmanesh.github.io/persian-rag/)
 
 Persian-first retrieval-augmented generation for Python.
 
@@ -10,11 +11,11 @@ persian-rag is a toolkit for building RAG systems over Farsi text. It normalizes
 
 The core install is pure Python with no dependencies. Every heavy piece (models, vector databases, parsers, the HTTP server) is an optional extra.
 
-**Documentation:** English and Persian guides live in [`docs/`](docs/) and build with MkDocs (see [Documentation](#documentation)).
+**Documentation:** <https://sadrmanesh.github.io/persian-rag/> in English and Persian. The sources live in [`docs/`](docs/) and build with MkDocs (see [Documentation](#documentation)).
 
 ## خلاصه فارسی
 
-persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، PDF و Word را می خواند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند. نتیجه را با رتبه بندی دوباره بهتر می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ به تابعی سپرده می شود که خودتان می دهید و می تواند همگام یا ناهمگام باشد. راهنمای کامل فارسی در پوشه docs است.
+persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، PDF و Word را می خواند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند. نتیجه را با رتبه بندی دوباره بهتر می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ به تابعی سپرده می شود که خودتان می دهید و می تواند همگام یا ناهمگام باشد. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است.
 
 ## Features
 
