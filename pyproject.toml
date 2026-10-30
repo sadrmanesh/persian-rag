@@ -1,0 +1,98 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "persian-rag"
+version = "0.1.0"
+description = "Persian-first retrieval-augmented generation toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Naser Sadrmanesh", email = "info.sadrmanesh@gmail.com" }]
+maintainers = [{ name = "Naser Sadrmanesh", email = "info.sadrmanesh@gmail.com" }]
+keywords = [
+    "persian",
+    "farsi",
+    "rag",
+    "retrieval",
+    "nlp",
+    "embeddings",
+    "bm25",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: Persian",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+sentence-transformers = ["sentence-transformers>=3.0.0"]
+faiss = ["faiss-cpu>=1.8.0", "numpy>=1.26.0"]
+all = ["sentence-transformers>=3.0.0", "faiss-cpu>=1.8.0", "numpy>=1.26.0"]
+dev = ["pytest>=8.2.0", "ruff>=0.6.0", "mypy>=1.11.0"]
+
+[project.urls]
+Homepage = "https://github.com/sadrmanesh/persian-rag"
+Repository = "https://github.com/sadrmanesh/persian-rag"
+Documentation = "https://github.com/sadrmanesh/persian-rag#readme"
+Changelog = "https://github.com/sadrmanesh/persian-rag/blob/main/CHANGELOG.md"
+Author = "https://sadrmanesh.github.io"
+
+[project.scripts]
+persian-rag = "persian_rag.cli:main"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/persian_rag",
+    "tests",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "pyproject.toml",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# Persian letters and punctuation are intentional, including confusables such as
+# Arabic yeh/kaf and the Arabic full stop.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["persian_rag"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+mypy_path = "src"
+packages = ["persian_rag"]
+warn_unused_ignores = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["faiss", "faiss.*", "numpy", "numpy.*", "sentence_transformers", "sentence_transformers.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "heavy: tests that download or load large models (set PERSIAN_RAG_RUN_HEAVY=1)",
+]
