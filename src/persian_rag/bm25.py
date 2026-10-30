@@ -12,7 +12,11 @@ from collections.abc import Sequence
 
 
 class BM25Index:
-    """Sparse lexical index. Duplicate document ids are rejected."""
+    """Sparse lexical index. Duplicate document ids are rejected.
+
+    Documents can be removed with :meth:`delete`, which keeps document
+    frequencies and the average length exact.
+    """
 
     def __init__(self, *, k1: float = 1.5, b: float = 0.75) -> None:
         if k1 <= 0:
@@ -52,6 +56,42 @@ class BM25Index:
             for token in frequencies:
                 self._df[token] = self._df.get(token, 0) + 1
         self._recompute_avgdl()
+
+    def __contains__(self, doc_id: object) -> bool:
+        return doc_id in self._positions
+
+    def delete(self, ids: Sequence[str]) -> int:
+        """Remove documents by id and return how many were removed.
+
+        Unknown ids are ignored.
+        """
+
+        doomed = {doc_id for doc_id in ids if doc_id in self._positions}
+        if not doomed:
+            return 0
+        kept_ids: list[str] = []
+        kept_freqs: list[dict[str, int]] = []
+        kept_lengths: list[int] = []
+        for doc_id, frequencies, length in zip(
+            self._ids, self._term_freqs, self._lengths, strict=True
+        ):
+            if doc_id in doomed:
+                for token in frequencies:
+                    remaining = self._df[token] - 1
+                    if remaining:
+                        self._df[token] = remaining
+                    else:
+                        del self._df[token]
+                continue
+            kept_ids.append(doc_id)
+            kept_freqs.append(frequencies)
+            kept_lengths.append(length)
+        self._ids = kept_ids
+        self._term_freqs = kept_freqs
+        self._lengths = kept_lengths
+        self._positions = {doc_id: position for position, doc_id in enumerate(kept_ids)}
+        self._recompute_avgdl()
+        return len(doomed)
 
     def search(self, query_tokens: Sequence[str], k: int) -> list[tuple[str, float]]:
         """Return up to ``k`` ``(doc_id, score)`` pairs, best score first."""

@@ -43,6 +43,13 @@ class VectorStore(Protocol):
         """Number of stored vectors."""
 
 
+class SupportsDelete(Protocol):
+    """A store that can remove vectors by id (needed for incremental indexing)."""
+
+    def delete(self, ids: Sequence[str]) -> None:
+        """Remove vectors by id. Unknown ids are ignored."""
+
+
 @dataclass(slots=True)
 class _MemoryRecord:
     id: str
@@ -95,6 +102,15 @@ class InMemoryVectorStore:
                     metadata=meta,
                 )
             )
+
+    def delete(self, ids: Sequence[str]) -> None:
+        """Remove vectors by id. Unknown ids are ignored."""
+
+        doomed = set(ids) & self._positions.keys()
+        if not doomed:
+            return
+        self._records = [record for record in self._records if record.id not in doomed]
+        self._positions = {record.id: index for index, record in enumerate(self._records)}
 
     def search(self, vector: Sequence[float], k: int = 5) -> list[VectorHit]:
         if k < 1:

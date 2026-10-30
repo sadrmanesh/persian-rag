@@ -5,17 +5,28 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from persian_rag.bm25 import BM25Index
 from persian_rag.cache import LRUCache, result_cache_key
 from persian_rag.chunk import Chunk
 from persian_rag.embeddings import Embedder
 from persian_rag.normalize import NormalizeConfig, normalize
-from persian_rag.store import InMemoryVectorStore, VectorStore
+from persian_rag.store import InMemoryVectorStore, VectorHit, VectorStore
 from persian_rag.tokenize import tokenize
 
 RetrievalMode = Literal["hybrid", "dense", "sparse"]
+
+
+class SparseBackend(Protocol):
+    """A server-side lexical index, such as Elasticsearch or OpenSearch BM25.
+
+    ``search_text`` receives the normalized query and returns hits with the
+    best score first.
+    """
+
+    def search_text(self, query: str, k: int = 5) -> list[VectorHit]:
+        """Return up to ``k`` lexical hits for ``query``."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +105,13 @@ class HybridRetriever:
 
     Pass ``result_cache`` (for example ``LRUCache(max_size=512, ttl=300)``)
     to reuse results for repeated queries. The cache is cleared whenever
-    chunks are added.
+    chunks are added or deleted.
+
+    Pass ``sparse_backend`` (for example an
+    :class:`~persian_rag.vectorstores.ElasticsearchStore`) to run the lexical
+    side on a search server instead of the in-process BM25 index. Hits for
+    chunks that are not held locally are rebuilt from the server payload, so
+    a retriever can query an index that another process filled.
     """
 
     def __init__(
@@ -110,6 +127,7 @@ class HybridRetriever:
         sparse_weight: float = 1.0,
         candidate_multiplier: int = 4,
         result_cache: LRUCache[list[RetrievalResult]] | None = None,
+        sparse_backend: SparseBackend | None = None,
     ) -> None:
         if rrf_k < 0:
             raise ValueError("rrf_k must be >= 0")
@@ -131,6 +149,7 @@ class HybridRetriever:
         self._embeddings: dict[str, list[float]] = {}
         self._order: list[str] = []
         self.result_cache = result_cache
+        self.sparse_backend = sparse_backend
 
     def __len__(self) -> int:
         return len(self._order)
@@ -141,6 +160,53 @@ class HybridRetriever:
 
     def embeddings(self) -> list[list[float]]:
         return [list(self._embeddings[chunk_id]) for chunk_id in self._order]
+
+    def __contains__(self, chunk_id: object) -> bool:
+        return chunk_id in self._chunks
+
+    def chunk_ids_for_document(self, document_id: str) -> list[str]:
+        """Ids of the indexed chunks that belong to ``document_id``, in order."""
+
+        return [
+            chunk_id
+            for chunk_id in self._order
+            if self._chunks[chunk_id].document_id == document_id
+        ]
+
+    def document_ids(self) -> list[str]:
+        """Distinct document ids in insertion order."""
+
+        return list(dict.fromkeys(self._chunks[chunk_id].document_id for chunk_id in self._order))
+
+    def delete_chunks(self, chunk_ids: Sequence[str]) -> int:
+        """Remove chunks from the store and the BM25 index.
+
+        Returns the number of chunks removed. Unknown ids are ignored. The
+        vector store must provide ``delete(ids)``; the in-memory, Qdrant,
+        pgvector, Elasticsearch, and OpenSearch stores do, FAISS does not.
+        """
+
+        doomed = [chunk_id for chunk_id in dict.fromkeys(chunk_ids) if chunk_id in self._chunks]
+        if not doomed:
+            return 0
+        delete = getattr(self.store, "delete", None)
+        if not callable(delete):
+            raise TypeError(f"{type(self.store).__name__} does not support deletion")
+        delete(doomed)
+        self.bm25.delete(doomed)
+        gone = set(doomed)
+        for chunk_id in doomed:
+            del self._chunks[chunk_id]
+            del self._embeddings[chunk_id]
+        self._order = [chunk_id for chunk_id in self._order if chunk_id not in gone]
+        if self.result_cache is not None:
+            self.result_cache.clear()
+        return len(doomed)
+
+    def delete_document(self, document_id: str) -> int:
+        """Remove every chunk of ``document_id`` and return how many were removed."""
+
+        return self.delete_chunks(self.chunk_ids_for_document(document_id))
 
     def add_chunks(
         self,
@@ -171,12 +237,13 @@ class HybridRetriever:
             if len(vector) != width:
                 raise ValueError(f"Expected embedding dimension {width}, got {len(vector)}")
 
-        self.store.add(
-            ids,
-            vectors,
-            [chunk.text for chunk in chunks],
-            [chunk.metadata for chunk in chunks],
-        )
+        if getattr(self.store, "stores_chunk_fields", False):
+            # Stores that can be queried by other processes keep the chunk
+            # position so results can be rebuilt without the local index.
+            metadatas = [_with_chunk_fields(chunk) for chunk in chunks]
+        else:
+            metadatas = [chunk.metadata for chunk in chunks]
+        self.store.add(ids, vectors, [chunk.text for chunk in chunks], metadatas)
         self.bm25.add(
             ids,
             [
@@ -204,7 +271,7 @@ class HybridRetriever:
             raise ValueError("k must be >= 1")
         if mode not in ("hybrid", "dense", "sparse"):
             raise ValueError("mode must be 'hybrid', 'dense', or 'sparse'")
-        if not self._chunks:
+        if not self._chunks and self.sparse_backend is None:
             return []
 
         normalized = normalize(query, self.normalize_config)
@@ -214,18 +281,27 @@ class HybridRetriever:
             cached = self.result_cache.get(cache_key)
             if cached is not None:
                 return list(cached)
-        pool = min(len(self._chunks), max(k, k * self.candidate_multiplier))
+        pool = max(k, k * self.candidate_multiplier)
+        if self.sparse_backend is None:
+            pool = min(len(self._chunks), pool)
         dense_ids: list[str] = []
         dense_scores: dict[str, float] = {}
         sparse_ids: list[str] = []
         sparse_scores: dict[str, float] = {}
+        remote: dict[str, VectorHit] = {}
 
-        if mode in ("hybrid", "dense"):
+        if mode in ("hybrid", "dense") and len(self.store) > 0:
             vector = self.embedder.embed_query(normalized)
             for hit in self.store.search(vector, k=pool):
                 dense_ids.append(hit.id)
                 dense_scores[hit.id] = hit.score
-        if mode in ("hybrid", "sparse"):
+                remote.setdefault(hit.id, hit)
+        if mode in ("hybrid", "sparse") and self.sparse_backend is not None:
+            for hit in self.sparse_backend.search_text(normalized, k=pool):
+                sparse_ids.append(hit.id)
+                sparse_scores[hit.id] = hit.score
+                remote.setdefault(hit.id, hit)
+        elif mode in ("hybrid", "sparse"):
             tokens = tokenize(normalized, normalize_text=False, config=self.normalize_config)
             for doc_id, score in self.bm25.search(tokens, k=pool):
                 sparse_ids.append(doc_id)
@@ -245,8 +321,12 @@ class HybridRetriever:
         dense_ranks = {doc_id: rank for rank, doc_id in enumerate(dense_ids, start=1)}
         sparse_ranks = {doc_id: rank for rank, doc_id in enumerate(sparse_ids, start=1)}
         results: list[RetrievalResult] = []
-        for doc_id, score in fused[:k]:
-            chunk = self._chunks[doc_id]
+        for doc_id, score in fused:
+            if len(results) == k:
+                break
+            chunk = self._chunks.get(doc_id) or _chunk_from_hit(remote.get(doc_id))
+            if chunk is None:
+                continue
             results.append(
                 RetrievalResult(
                     chunk_id=chunk.id,
@@ -274,3 +354,44 @@ class HybridRetriever:
         """Async variant of :meth:`retrieve`; runs in a worker thread."""
 
         return await asyncio.to_thread(self.retrieve, query, k, mode=mode)
+
+
+def _with_chunk_fields(chunk: Chunk) -> dict[str, Any]:
+    return {
+        **chunk.metadata,
+        "_document_id": chunk.document_id,
+        "_start": chunk.start,
+        "_end": chunk.end,
+        "_index": chunk.index,
+    }
+
+
+def _chunk_from_hit(hit: VectorHit | None) -> Chunk | None:
+    """Rebuild a chunk from a store payload when it is not held in memory."""
+
+    if hit is None:
+        return None
+    metadata = dict(hit.metadata)
+    document_id = str(metadata.pop("_document_id", "") or metadata.get("source", "") or "")
+    start = _int_or(metadata.pop("_start", 0), 0)
+    end = _int_or(metadata.pop("_end", start + len(hit.text)), start + len(hit.text))
+    index = _int_or(metadata.pop("_index", 0), 0)
+    return Chunk(
+        id=hit.id,
+        text=hit.text,
+        start=start,
+        end=end,
+        index=index,
+        document_id=document_id,
+        metadata=metadata,
+    )
+
+
+def _int_or(value: object, default: int) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return default
