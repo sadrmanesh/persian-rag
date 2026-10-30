@@ -38,7 +38,7 @@ def test_load_rejects_unsupported_and_oversized_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pdf = tmp_path / "notes.pdf"
+    pdf = tmp_path / "notes.rtf"
     pdf.write_text("نه", encoding="utf-8")
     with pytest.raises(PersianRagError):
         load_documents(pdf)

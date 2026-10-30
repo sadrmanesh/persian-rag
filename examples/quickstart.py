@@ -23,7 +23,7 @@ def main() -> None:
 def _answer(prompt: str) -> str:
     if "شیراز" in prompt:
         return "شیراز"
-    return "نمی‌دانم"
+    return "نامشخص"
 
 
 if __name__ == "__main__":

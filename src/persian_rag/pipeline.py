@@ -6,9 +6,11 @@ a string. persian-rag does not ship a model.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+import asyncio
+import inspect
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from persian_rag.chunk import Chunk, ChunkingConfig, chunk_text
 from persian_rag.embeddings import Embedder
@@ -16,7 +18,11 @@ from persian_rag.normalize import NormalizeConfig, normalize
 from persian_rag.retrieval import HybridRetriever, RetrievalMode, RetrievalResult
 from persian_rag.store import VectorStore
 
+if TYPE_CHECKING:
+    from persian_rag.rerank import Reranker
+
 LLM = Callable[[str], str]
+AsyncLLM = Callable[[str], Awaitable[str]]
 
 DEFAULT_PROMPT_FA = (
     "تنها با تکیه بر متن‌های زیر به پرسش پاسخ بده. "
@@ -46,16 +52,24 @@ class RAGAnswer:
 
 
 class RAGPipeline:
-    """Retrieve context and, when an LLM is set, generate an answer."""
+    """Retrieve context and, when an LLM is set, generate an answer.
+
+    With a ``reranker``, the retriever first fetches ``rerank_candidates``
+    chunks (at least ``k``) and the reranker picks the final ``k``.
+    ``llm`` may be a plain function or an ``async`` function; async models
+    are supported by :meth:`aquery`.
+    """
 
     def __init__(
         self,
         retriever: HybridRetriever,
-        llm: LLM | None = None,
+        llm: LLM | AsyncLLM | None = None,
         *,
         prompt_template: str = DEFAULT_PROMPT_FA,
         context_template: str = "[{n}] {text}",
         separator: str = "\n\n",
+        reranker: Reranker | None = None,
+        rerank_candidates: int = 20,
     ) -> None:
         _require_placeholders(prompt_template)
         if "{text}" not in context_template or "{n}" not in context_template:
@@ -65,6 +79,10 @@ class RAGPipeline:
         self.prompt_template = prompt_template
         self.context_template = context_template
         self.separator = separator
+        if rerank_candidates < 1:
+            raise ValueError("rerank_candidates must be >= 1")
+        self.reranker = reranker
+        self.rerank_candidates = rerank_candidates
 
     def build_prompt(self, question: str, contexts: Sequence[RetrievalResult]) -> str:
         """Fill the prompt template. Placeholders are replaced literally."""
@@ -99,21 +117,98 @@ class RAGPipeline:
         contains the retrieved context.
         """
 
-        contexts = self.retriever.retrieve(question, k=k, mode=mode)
+        contexts = self.retrieve(question, k=k, mode=mode)
         prompt = self.build_prompt(question, contexts)
         if self.llm is None:
             answer = ""
         else:
             generated = self.llm(prompt)
-            if not isinstance(generated, str):
-                raise TypeError("LLM callable must return a string")
-            answer = generated
+            if inspect.isawaitable(generated):
+                _close_awaitable(generated)
+                raise TypeError("The LLM is asynchronous; use aquery() instead of query()")
+            answer = _require_text(generated)
         return RAGAnswer(
             question=question,
             answer=answer,
             prompt=prompt,
             contexts=tuple(contexts),
         )
+
+    def retrieve(
+        self,
+        question: str,
+        *,
+        k: int = 5,
+        mode: RetrievalMode = "hybrid",
+    ) -> list[RetrievalResult]:
+        """Retrieve ``k`` chunks, reranking a larger pool when configured."""
+
+        if self.reranker is None:
+            return self.retriever.retrieve(question, k=k, mode=mode)
+        pool = self.retriever.retrieve(question, k=max(k, self.rerank_candidates), mode=mode)
+        return self.reranker.rerank(question, pool, top_k=k)
+
+    async def aretrieve(
+        self,
+        question: str,
+        *,
+        k: int = 5,
+        mode: RetrievalMode = "hybrid",
+    ) -> list[RetrievalResult]:
+        """Async variant of :meth:`retrieve`."""
+
+        return await asyncio.to_thread(self.retrieve, question, k=k, mode=mode)
+
+    async def aquery(
+        self,
+        question: str,
+        *,
+        k: int = 5,
+        mode: RetrievalMode = "hybrid",
+    ) -> RAGAnswer:
+        """Async variant of :meth:`query`.
+
+        Retrieval and reranking run in a worker thread. An ``async`` LLM is
+        awaited directly; a synchronous one runs in a worker thread so the
+        event loop is never blocked.
+        """
+
+        contexts = await self.aretrieve(question, k=k, mode=mode)
+        prompt = self.build_prompt(question, contexts)
+        if self.llm is None:
+            answer = ""
+        elif _is_async_callable(self.llm):
+            answer = _require_text(await self.llm(prompt))  # type: ignore[misc]
+        else:
+            generated = await asyncio.to_thread(self.llm, prompt)
+            if inspect.isawaitable(generated):
+                generated = await generated
+            answer = _require_text(generated)
+        return RAGAnswer(
+            question=question,
+            answer=answer,
+            prompt=prompt,
+            contexts=tuple(contexts),
+        )
+
+
+def _is_async_callable(func: object) -> bool:
+    if inspect.iscoroutinefunction(func):
+        return True
+    call = getattr(func, "__call__", None)  # noqa: B004
+    return inspect.iscoroutinefunction(call)
+
+
+def _close_awaitable(value: object) -> None:
+    close = getattr(value, "close", None)
+    if callable(close):
+        close()
+
+
+def _require_text(value: object) -> str:
+    if not isinstance(value, str):
+        raise TypeError("LLM callable must return a string")
+    return value
 
 
 def build_retriever(

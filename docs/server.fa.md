@@ -1,0 +1,35 @@
+# رابط HTTP
+
+```bash
+pip install "persian-rag[server]"
+persian-rag serve --index .persian-rag --host 127.0.0.1 --port 8000
+```
+
+یا از درون کد:
+
+```python
+import uvicorn
+from persian_rag.server import create_app
+
+app = create_app(pipeline, title="My Persian search", max_k=50)
+uvicorn.run(app, host="127.0.0.1", port=8000)
+```
+
+خروجی `create_app` یک برنامه معمولی FastAPI است، پس می توانید میان افزار یا مسیرهای دیگری به آن اضافه کنید. پاسخ گویی ناهمگام است و فراخوانی کند مدل، درخواست های دیگر را معطل نمی کند.
+
+## مسیرها
+
+| روش | مسیر | بدنه | خروجی |
+| --- | --- | --- | --- |
+| `GET` | `/health` | | وضعیت، نسخه، تعداد تکه ها و وجود مدل و رتبه بند |
+| `POST` | `/retrieve` | `{"query": "...", "k": 5, "mode": "hybrid"}` | پرسش و فهرست نتیجه ها |
+| `POST` | `/query` | `{"question": "...", "k": 5}` | پرسش، پاسخ، متن ها و در صورت درخواست پرامپت |
+
+درخواست با پرسش خالی، حالت نامعتبر یا `k` بیشتر از `max_k` خطای 422 می گیرد. مستندات تعاملی در مسیر `/docs` در دسترس است.
+
+```bash
+curl -s localhost:8000/retrieve -H 'content-type: application/json' \
+  -d '{"query": "حافظ اهل کجا بود؟", "k": 3}'
+```
+
+این سرور احراز هویت ندارد. پیش از انتشار عمومی، آن را پشت دروازه امن خودتان قرار دهید.

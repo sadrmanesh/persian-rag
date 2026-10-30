@@ -1,4 +1,4 @@
-"""Command line interface for ingesting files and querying an index."""
+"""Command line interface: ingest, query, eval, and serve."""
 
 from __future__ import annotations
 
@@ -6,25 +6,31 @@ import argparse
 import json
 import os
 import sys
+from contextlib import ExitStack
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from persian_rag.chunk import ChunkingConfig, ChunkStrategy
 from persian_rag.documents import load_documents
 from persian_rag.embeddings import (
+    Embedder,
     EmbedderSpec,
     HashingEmbedder,
     OpenAICompatibleEmbedder,
     SentenceTransformerEmbedder,
     create_embedder,
 )
-from persian_rag.errors import ConfigError, PersianRagError
+from persian_rag.errors import ConfigError, MissingDependencyError, PersianRagError
 from persian_rag.normalize import DigitStyle, NormalizeConfig, ZwnjMode
 from persian_rag.persist import load_index, retriever_from_saved, save_index
 from persian_rag.pipeline import DEFAULT_PROMPT_EN, DEFAULT_PROMPT_FA, RAGPipeline, build_retriever
 from persian_rag.remote import make_openai_llm
+from persian_rag.rerank import CrossEncoderReranker, LLMReranker, Reranker
 from persian_rag.retrieval import RetrievalMode
 from persian_rag.version import __version__
+
+if TYPE_CHECKING:
+    from persian_rag.loaders import RtlFix
 
 _DEFAULT_OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 _DEFAULT_OPENAI_CHAT_MODEL = "gpt-4o-mini"
@@ -55,8 +61,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"persian-rag {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    ingest = commands.add_parser("ingest", help="Index a text or Markdown file or directory")
-    ingest.add_argument("path", type=Path, help="File or directory of .txt and .md files")
+    ingest = commands.add_parser("ingest", help="Index a file or a directory of documents")
+    ingest.add_argument(
+        "path", type=Path, help="File or directory of .txt, .md, .pdf, and .docx files"
+    )
     ingest.add_argument(
         "--index",
         type=Path,
@@ -102,36 +110,107 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="OpenAI-compatible base URL (default: env OPENAI_BASE_URL or the official API)",
     )
+    ingest.add_argument(
+        "--rtl-fix",
+        choices=("auto", "reverse", "none"),
+        default="auto",
+        help="Repair PDF lines stored in visual order (default: auto-detect)",
+    )
+    ingest.add_argument(
+        "--split-pages", action="store_true", help="Index each PDF page as its own document"
+    )
+    ingest.add_argument(
+        "--embedding-cache",
+        type=Path,
+        default=None,
+        help="SQLite file that caches embeddings between runs",
+    )
     ingest.set_defaults(func=_cmd_ingest)
 
     query = commands.add_parser("query", help="Search an index and optionally generate an answer")
     query.add_argument("question")
-    query.add_argument("--index", type=Path, default=Path(".persian-rag"))
+    _add_pipeline_arguments(query)
     query.add_argument("--k", type=int, default=5)
     query.add_argument("--mode", choices=("hybrid", "dense", "sparse"), default="hybrid")
-    query.add_argument("--llm", choices=("none", "openai"), default="none")
-    query.add_argument("--llm-model", default=_DEFAULT_OPENAI_CHAT_MODEL)
-    query.add_argument("--base-url", default=None)
-    query.add_argument("--prompt-lang", choices=("fa", "en"), default="fa")
     query.add_argument("--json", action="store_true", help="Print the result as JSON")
     query.add_argument("--show-prompt", action="store_true")
     query.set_defaults(func=_cmd_query)
+
+    evaluate = commands.add_parser("eval", help="Measure retrieval and answer quality")
+    evaluate.add_argument("dataset", type=Path, help="JSONL file of labelled questions")
+    _add_pipeline_arguments(evaluate)
+    evaluate.add_argument(
+        "--k", type=int, nargs="+", default=[1, 3, 5, 10], help="Cut-offs (default: 1 3 5 10)"
+    )
+    evaluate.add_argument("--mode", choices=("hybrid", "dense", "sparse"), default="hybrid")
+    evaluate.add_argument(
+        "--match",
+        choices=("document", "chunk"),
+        default="document",
+        help="Compare relevant_ids with document ids or chunk ids",
+    )
+    evaluate.add_argument(
+        "--answers",
+        action="store_true",
+        help="Also generate answers and score faithfulness (needs --llm)",
+    )
+    evaluate.add_argument(
+        "--judge",
+        choices=("overlap", "llm"),
+        default="overlap",
+        help="Faithfulness scorer for --answers (default: token overlap)",
+    )
+    evaluate.add_argument("--json", action="store_true", help="Print the report as JSON")
+    evaluate.set_defaults(func=_cmd_eval)
+
+    serve = commands.add_parser("serve", help="Serve an index over HTTP (needs [server])")
+    _add_pipeline_arguments(serve)
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.set_defaults(func=_cmd_serve)
     return parser
 
 
+def _add_pipeline_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--index", type=Path, default=Path(".persian-rag"))
+    parser.add_argument("--llm", choices=("none", "openai"), default="none")
+    parser.add_argument("--llm-model", default=_DEFAULT_OPENAI_CHAT_MODEL)
+    parser.add_argument("--base-url", default=None)
+    parser.add_argument("--prompt-lang", choices=("fa", "en"), default="fa")
+    parser.add_argument(
+        "--rerank",
+        choices=("none", "cross-encoder", "llm"),
+        default="none",
+        help="Rerank retrieved chunks (cross-encoder needs [rerank]; llm needs --llm)",
+    )
+    parser.add_argument("--rerank-model", default=None, help="Cross-encoder model name")
+    parser.add_argument("--rerank-candidates", type=int, default=20)
+
+
 def _cmd_ingest(args: argparse.Namespace) -> int:
-    documents = load_documents(args.path)
+    documents = load_documents(
+        args.path,
+        rtl_fix=cast("RtlFix", _choice(args.rtl_fix, ("auto", "reverse", "none"), "rtl-fix")),
+        split_pages=bool(args.split_pages),
+    )
     normalize_config = _normalize_from_args(args)
     chunking = _chunking_from_args(args)
     embedder = _embedder_from_args(args)
-    retriever = build_retriever(
-        [document.text for document in documents],
-        embedder,
-        document_ids=[document.id for document in documents],
-        metadatas=[document.metadata for document in documents],
-        normalize_config=normalize_config,
-        chunking=chunking,
-    )
+    with ExitStack() as stack:
+        indexing_embedder: Embedder = embedder
+        if args.embedding_cache is not None:
+            from persian_rag.cache import CachedEmbedder, SQLiteEmbeddingCache
+
+            cache = stack.enter_context(SQLiteEmbeddingCache(args.embedding_cache))
+            indexing_embedder = CachedEmbedder(embedder, cache)
+        retriever = build_retriever(
+            [document.text for document in documents],
+            indexing_embedder,
+            document_ids=[document.id for document in documents],
+            metadatas=[document.metadata for document in documents],
+            normalize_config=normalize_config,
+            chunking=chunking,
+        )
     if len(retriever) == 0:
         raise PersianRagError("No chunks were produced from the input")
     target = save_index(args.index, retriever, embedder.to_spec(), chunking)
@@ -139,7 +218,7 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_query(args: argparse.Namespace) -> int:
+def _build_pipeline(args: argparse.Namespace) -> RAGPipeline:
     saved = load_index(args.index)
     spec = _spec_with_base_url(saved.embedder, args.base_url)
     embedder = create_embedder(spec)
@@ -151,8 +230,27 @@ def _cmd_query(args: argparse.Namespace) -> int:
             api_key=os.environ.get("OPENAI_API_KEY", ""),
             base_url=_base_url(args.base_url),
         )
+    reranker: Reranker | None = None
+    rerank = _choice(args.rerank, ("none", "cross-encoder", "llm"), "rerank")
+    if rerank == "cross-encoder":
+        model = _optional_str(args.rerank_model)
+        reranker = CrossEncoderReranker(model) if model else CrossEncoderReranker()
+    elif rerank == "llm":
+        if llm is None:
+            raise ConfigError("--rerank llm needs --llm openai")
+        reranker = LLMReranker(llm)
     template = DEFAULT_PROMPT_FA if args.prompt_lang == "fa" else DEFAULT_PROMPT_EN
-    pipeline = RAGPipeline(retriever, llm, prompt_template=template)
+    return RAGPipeline(
+        retriever,
+        llm,
+        prompt_template=template,
+        reranker=reranker,
+        rerank_candidates=int(args.rerank_candidates),
+    )
+
+
+def _cmd_query(args: argparse.Namespace) -> int:
+    pipeline = _build_pipeline(args)
     answer = pipeline.query(str(args.question), k=int(args.k), mode=_mode_from_args(args))
     if bool(args.json):
         payload: dict[str, object] = {
@@ -180,6 +278,73 @@ def _cmd_query(args: argparse.Namespace) -> int:
         print("--- prompt ---")
         print(answer.prompt)
     return 0
+
+
+def _cmd_eval(args: argparse.Namespace) -> int:
+    from persian_rag.evaluation import (
+        FaithfulnessScorer,
+        LLMFaithfulnessJudge,
+        MatchOn,
+        TokenOverlapFaithfulness,
+        evaluate_answers,
+        evaluate_retrieval,
+        load_eval_examples,
+    )
+
+    examples = load_eval_examples(args.dataset)
+    pipeline = _build_pipeline(args)
+    match: MatchOn = (
+        "chunk" if _choice(args.match, ("document", "chunk"), "match") == "chunk" else "document"
+    )
+    report = evaluate_retrieval(
+        pipeline,
+        examples,
+        k_values=[int(value) for value in args.k],
+        mode=_mode_from_args(args),
+        match=match,
+    )
+    answers = None
+    if bool(args.answers):
+        if pipeline.llm is None:
+            raise ConfigError("--answers needs --llm openai")
+        scorer: FaithfulnessScorer = TokenOverlapFaithfulness()
+        if args.judge == "llm":
+            llm = pipeline.llm
+            scorer = LLMFaithfulnessJudge(lambda prompt: str(llm(prompt)))
+        answers = evaluate_answers(
+            pipeline, examples, scorer=scorer, k=max(args.k), mode=_mode_from_args(args)
+        )
+    if bool(args.json):
+        payload: dict[str, object] = {"retrieval": report.to_dict(include_queries=True)}
+        if answers is not None:
+            payload["answers"] = answers.to_dict(include_answers=True)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+    print(f"Questions: {report.num_queries} (match on {report.match})")
+    print(report.format_table())
+    if answers is not None:
+        print()
+        print(f"Mean faithfulness: {_format_optional(answers.mean_faithfulness)}")
+        print(f"Mean reference F1: {_format_optional(answers.mean_reference_f1)}")
+    return 0
+
+
+def _cmd_serve(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise MissingDependencyError(
+            "uvicorn is not installed. Install it with: pip install 'persian-rag[server]'"
+        ) from exc
+    from persian_rag.server import create_app
+
+    app = create_app(_build_pipeline(args))
+    uvicorn.run(app, host=str(args.host), port=int(args.port))
+    return 0
+
+
+def _format_optional(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.4f}"
 
 
 def _normalize_from_args(args: argparse.Namespace) -> NormalizeConfig:
