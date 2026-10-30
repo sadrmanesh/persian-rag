@@ -1,0 +1,84 @@
+site_name: persian-rag
+site_description: Persian-first retrieval-augmented generation for Python
+site_author: Naser Sadrmanesh
+site_url: https://sadrmanesh.github.io/persian-rag/
+repo_url: https://github.com/sadrmanesh/persian-rag
+repo_name: sadrmanesh/persian-rag
+copyright: Copyright &copy; 2026 Naser Sadrmanesh
+edit_uri: ""
+
+theme:
+  name: material
+  language: en
+  direction: ltr
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - scheme: default
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      languages:
+        - locale: en
+          name: English
+          default: true
+          build: true
+        - locale: fa
+          name: فارسی
+          build: true
+          site_name: persian-rag
+          site_description: ابزار بازیابی و تولید پاسخ برای زبان فارسی
+          theme:
+            direction: rtl
+          nav_translations:
+            Home: خانه
+            Getting started: شروع کار
+            Normalization: یکدست سازی متن
+            Loading documents: بارگذاری اسناد
+            Retrieval and reranking: بازیابی و رتبه بندی دوباره
+            Vector stores: پایگاه های برداری
+            Caching and async: حافظه نهان و اجرای ناهمگام
+            Evaluation: ارزیابی
+            HTTP API: رابط HTTP
+            Command line: خط فرمان
+            Releasing: انتشار نسخه
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Normalization: normalization.md
+  - Loading documents: loaders.md
+  - Retrieval and reranking: retrieval.md
+  - Vector stores: vector-stores.md
+  - Caching and async: caching-async.md
+  - Evaluation: evaluation.md
+  - HTTP API: server.md
+  - Command line: cli.md
+  - Releasing: releasing.md
