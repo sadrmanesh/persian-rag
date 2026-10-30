@@ -74,6 +74,7 @@ plugins:
             LLM adapters: اتصال به مدل های زبانی
             Benchmarks: محک ها
             HTTP API: رابط HTTP
+            Docker: داکر
             Command line: خط فرمان
             Releasing: انتشار نسخه
 
@@ -94,5 +95,6 @@ nav:
   - Evaluation: evaluation.md
   - Benchmarks: benchmarks.md
   - HTTP API: server.md
+  - Docker: docker.md
   - Command line: cli.md
   - Releasing: releasing.md

@@ -5,6 +5,12 @@ pip install "persian-rag[server]"
 persian-rag serve --index .persian-rag --host 127.0.0.1 --port 8000
 ```
 
+Or with Docker, from the image published on every release (see [Docker](docker.md)):
+
+```bash
+docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.3.1
+```
+
 Or from code:
 
 ```python

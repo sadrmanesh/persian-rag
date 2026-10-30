@@ -153,3 +153,43 @@ jobs:
           python -m pip install build twine
           python -m build
           python -m twine check --strict dist/*
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t persian-rag:ci .
+      - name: Index a sample document
+        run: |
+          mkdir -p "$RUNNER_TEMP/library" "$RUNNER_TEMP/data"
+          chmod 777 "$RUNNER_TEMP/data"
+          printf 'حافظ شاعر بزرگ ایرانی در شیراز به دنیا آمد.\n' > "$RUNNER_TEMP/library/hafez.txt"
+          docker run --rm \
+            -v "$RUNNER_TEMP/library:/library:ro" \
+            -v "$RUNNER_TEMP/data:/data" \
+            persian-rag:ci ingest /library --index /data/index
+      - name: Smoke test the HTTP API
+        run: |
+          docker run -d --name rag -p 127.0.0.1:8000:8000 -v "$RUNNER_TEMP/data:/data" persian-rag:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/health | grep -q '"status"'
+          curl -fsS http://127.0.0.1:8000/retrieve -H 'content-type: application/json' \
+            -d '{"query": "حافظ کجا به دنیا آمد؟", "k": 1}' | grep -q hafez
+          for i in $(seq 1 30); do
+            state="$(docker inspect --format '{{.State.Health.Status}}' rag)"
+            echo "health: ${state}"
+            if [ "${state}" = "healthy" ]; then exit 0; fi
+            sleep 3
+          done
+          docker logs rag
+          exit 1
+      - name: Server logs
+        if: failure()
+        run: docker logs rag || true
+      - name: Runs as a non-root user
+        run: test "$(docker run --rm --entrypoint id persian-rag:ci -u)" != "0"
