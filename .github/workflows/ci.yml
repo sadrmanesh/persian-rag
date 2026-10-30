@@ -62,7 +62,7 @@ jobs:
         image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: persian_rag
         ports:
           - 5432:5432
@@ -72,7 +72,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      PERSIAN_RAG_PG_DSN: postgresql://postgres:postgres@localhost:5432/persian_rag
+      PERSIAN_RAG_PG_DSN: postgresql://postgres@localhost:5432/persian_rag
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
