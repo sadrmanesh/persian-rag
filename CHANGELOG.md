@@ -2,6 +2,13 @@
 
 All notable changes to persian-rag are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- An optional Docker Hub job in the release workflow. When the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets are set, it copies the released GHCR image to `docker.io/<username>/persian-rag` with the same tags. Without them it skips.
+- `.github/workflows/mirror.yml`, which mirrors `main` and tags to `gitlab.com/sadrmanesh/persian-rag` when the `GITLAB_TOKEN` secret is set, and skips cleanly otherwise.
+
 ## [0.3.1] - 2026-10-30
 
 ### Added
