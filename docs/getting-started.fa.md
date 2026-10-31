@@ -62,6 +62,18 @@ remote = OpenAICompatibleEmbedder(model="text-embedding-3-small")
 
 از نسخه 0.4.0 مدل پیش فرض `SentenceTransformerEmbedder` مدل [`intfloat/multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small) است (۱۱۸ میلیون پارامتر و ۳۸۴ بعد). این مدل در مجموعه های بازیابی فارسی با همان اندازه بسیار بهتر از مدل پیش فرض قبلی، `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`، کار می کند. عددها در [محک ها](benchmarks.md#embedding-models) آمده اند.
 
+برای دقت بیشتر از [`intfloat/multilingual-e5-base`](https://huggingface.co/intfloat/multilingual-e5-base) استفاده کنید (۲۷۸ میلیون پارامتر و ۷۶۸ بعد). نام های کوتاه `e5-small` و `e5-base` هر جا که نام مدل پذیرفته می شود کار می کنند:
+
+```python
+SentenceTransformerEmbedder("e5-base")  # same as "intfloat/multilingual-e5-base"
+```
+
+```bash
+persian-rag ingest ./library --index .persian-rag --embedder sentence-transformers --model e5-base
+```
+
+مدل e5-base در MIRACL fa dev به nDCG@10 برابر 0.7657 می رسد، در برابر 0.7461 برای e5-small، و روی پرسش های پرخطا بسیار بهتر است. اما حدود ۲.۴ برابر بزرگ تر است، ایندکس آن دو برابر جا می گیرد و روی CPU حدود ۲.۴ برابر کندتر بردار می سازد. مقایسه کامل در [محک ها](benchmarks.md#e5-small-or-e5-base) آمده است. ایندکس نام کامل مدل را نگه می دارد، پس `query`، `chat`، `eval` و `serve` برای ایندکسی که با e5-base ساخته شده دوباره همین مدل را بار می کنند.
+
 مدل های E5 پیش از پرسش `query: ` و پیش از سند `passage: ` می خواهند. بردارساز این پیشوندها را خودش اضافه می کند:
 
 | `prefix` | رفتار |

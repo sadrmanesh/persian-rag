@@ -35,7 +35,9 @@ from persian_rag.documents import (
 )
 from persian_rag.embeddings import (
     DEFAULT_ST_MODEL,
+    E5_BASE_MODEL,
     LEGACY_ST_MODEL,
+    ST_MODEL_ALIASES,
     Embedder,
     EmbedderSpec,
     HashingEmbedder,
@@ -43,6 +45,7 @@ from persian_rag.embeddings import (
     SentenceTransformerEmbedder,
     create_embedder,
     is_e5_model,
+    resolve_model_name,
     resolve_prefixes,
 )
 from persian_rag.errors import (
@@ -98,7 +101,9 @@ __all__ = [
     "DEFAULT_PROMPT_EN",
     "DEFAULT_PROMPT_FA",
     "DEFAULT_ST_MODEL",
+    "E5_BASE_MODEL",
     "LEGACY_ST_MODEL",
+    "ST_MODEL_ALIASES",
     "BM25Index",
     "CachedEmbedder",
     "ChatAnswer",
@@ -174,6 +179,7 @@ __all__ = [
     "make_openai_llm",
     "normalize",
     "reciprocal_rank_fusion",
+    "resolve_model_name",
     "resolve_prefixes",
     "retriever_from_saved",
     "save_index",

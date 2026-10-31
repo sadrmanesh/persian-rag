@@ -20,14 +20,14 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 ## خلاصه فارسی
 
-persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. از نسخه 0.4.0 مدل بردارساز پیش فرض `intfloat/multilingual-e5-small` با پیشوندهای E5 است. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. سرور HTTP به صورت ایمیج داکر `ghcr.io/sadrmanesh/persian-rag` هم منتشر می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است. [نسخه نمایشی زنده](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) در Hugging Face Spaces و [مجموعه داده محک](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) در Hugging Face Hub هم در دسترس هستند.
+persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. از نسخه 0.4.0 مدل بردارساز پیش فرض `intfloat/multilingual-e5-small` با پیشوندهای E5 است و مدل دقیق تر `intfloat/multilingual-e5-base` هم با `--model e5-base` در دسترس است. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. سرور HTTP به صورت ایمیج داکر `ghcr.io/sadrmanesh/persian-rag` هم منتشر می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است. [نسخه نمایشی زنده](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) در Hugging Face Spaces و [مجموعه داده محک](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) در Hugging Face Hub هم در دسترس هستند.
 
 ## Features
 
 - **Normalization** for Persian: Arabic Yeh and Kaf, presentation forms, ZWNJ, digits, optional diacritics, and punctuation.
 - **Loaders** for `.txt`, `.md`, `.html`, `.pdf`, `.docx`, and web URLs. HTML goes through readability-style main-content extraction, Markdown front matter becomes metadata and files can be split by heading, and PDF text in visual (reversed) order is detected and repaired.
 - **Chunking**: fixed windows with overlap, sentence packing, and recursive separators.
-- **Embeddings** through a small protocol, with adapters for `sentence-transformers` (default `intfloat/multilingual-e5-small`, with automatic E5 query and passage prefixes) and any OpenAI-compatible API, plus a persistent embedding cache. Indexes remember their model, and loading one with a different model is refused.
+- **Embeddings** through a small protocol, with adapters for `sentence-transformers` (default `intfloat/multilingual-e5-small`, or the more accurate `intfloat/multilingual-e5-base` with `--model e5-base`, both with automatic E5 query and passage prefixes) and any OpenAI-compatible API, plus a persistent embedding cache. Indexes remember their model, and loading one with a different model is refused.
 - **Vector stores**: in-memory, FAISS, Qdrant, PostgreSQL with pgvector, and Elasticsearch or OpenSearch (which also serve BM25 for hybrid search, without a client package).
 - **Incremental indexing**: content hashes, upserts, and deletions, so only changed documents are re-embedded.
 - **Hybrid retrieval** with BM25 and [reciprocal rank fusion](https://plg.uwaterloo.ca/gvcormac/cormacksigir09-rrf.pdf), and an optional query result cache.
@@ -103,7 +103,7 @@ for item in result.contexts:
     print(round(item.score, 4), item.text)
 ```
 
-`HashingEmbedder` is a deterministic character n-gram hash for tests and offline checks. For semantic search use `SentenceTransformerEmbedder` (default model `intfloat/multilingual-e5-small`, with the E5 `query: `/`passage: ` prefixes added for you) or `OpenAICompatibleEmbedder`. The same flow is in [`examples/quickstart.py`](examples/quickstart.py).
+`HashingEmbedder` is a deterministic character n-gram hash for tests and offline checks. For semantic search use `SentenceTransformerEmbedder` (default model `intfloat/multilingual-e5-small`, with the E5 `query: `/`passage: ` prefixes added for you; `SentenceTransformerEmbedder("e5-base")` loads the larger, more accurate `intfloat/multilingual-e5-base`) or `OpenAICompatibleEmbedder`. The same flow is in [`examples/quickstart.py`](examples/quickstart.py).
 
 > **Upgrading to 0.4.0:** the default `sentence-transformers` model changed from `paraphrase-multilingual-MiniLM-L12-v2` to `intfloat/multilingual-e5-small`. Existing indexes keep working with the model they were built with. Rebuild indexes made with the old default to use the new one, or pass `--model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` to keep it. See [Upgrading from 0.3.x](https://sadrmanesh.github.io/persian-rag/getting-started/#upgrading-from-03x).
 
@@ -304,6 +304,9 @@ With `--embedder sentence-transformers`, the 0.4.0 default model `intfloat/multi
 |---|---:|---:|---:|
 | paraphrase-multilingual-MiniLM-L12-v2 (old default) | 0.4424 | 0.6437 | 0.8637 |
 | multilingual-e5-small with prefixes (new default) | 0.7461 | 0.9242 | 0.9881 |
+| multilingual-e5-base with prefixes (`--model e5-base`) | **0.7657** | **0.9247** | **1.0000** |
+
+`intfloat/multilingual-e5-base` (278M parameters, 768 dimensions) is the more accurate option: +0.02 nDCG@10 on MIRACL fa dev, and much more robust to queries typed with Arabic yeh and kaf and without half spaces when the text is not normalized (MIRACL 0.7089 against 0.6645, PQuAD 0.8906 against 0.8639). It is about 2.4 times the size, its vectors take twice the space, and it encodes about 2.4 times slower on CPU (22 against 54 PQuAD paragraphs per second on 8 cores; a single query takes 13 ms against 6 ms). Pass `--model e5-base` (or the full name) to use it; e5-small stays the default.
 
 \* 632 queries against a pooled corpus of 6,405 judged passages, not the full MIRACL corpus, so not comparable with published MIRACL scores.
 

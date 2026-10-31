@@ -16,7 +16,9 @@ import pytest
 
 from persian_rag import (
     DEFAULT_ST_MODEL,
+    E5_BASE_MODEL,
     LEGACY_ST_MODEL,
+    ST_MODEL_ALIASES,
     ChunkingConfig,
     EmbedderSpec,
     HashingEmbedder,
@@ -26,6 +28,7 @@ from persian_rag import (
     create_embedder,
     is_e5_model,
     load_index,
+    resolve_model_name,
     resolve_prefixes,
     retriever_from_saved,
     save_index,
@@ -265,6 +268,65 @@ def test_cli_ingest_prefix_flags(tmp_path: Path, fake_st: type[FakeSentenceTrans
         "Q: ",
         "",
     )
+
+
+def test_model_aliases() -> None:
+    assert E5_BASE_MODEL == "intfloat/multilingual-e5-base"
+    assert ST_MODEL_ALIASES == {"e5-small": DEFAULT_ST_MODEL, "e5-base": E5_BASE_MODEL}
+    assert resolve_model_name("e5-base") == E5_BASE_MODEL
+    assert resolve_model_name(" E5-Small ") == DEFAULT_ST_MODEL
+    assert resolve_model_name("BAAI/bge-m3") == "BAAI/bge-m3"
+    assert resolve_model_name(E5_BASE_MODEL) == E5_BASE_MODEL
+
+
+@pytest.mark.parametrize("name", [E5_BASE_MODEL, "e5-base"])
+def test_e5_base_gets_prefixes_and_full_name(
+    name: str, fake_st: type[FakeSentenceTransformer]
+) -> None:
+    embedder = SentenceTransformerEmbedder(name)
+    assert embedder.model_name == E5_BASE_MODEL
+    embedder.embed_documents(["حافظ"])
+    embedder.embed_query("حافظ کجاست")
+    assert fake_st.calls == [
+        (E5_BASE_MODEL, "encode", ["passage: حافظ"]),
+        (E5_BASE_MODEL, "encode", ["query: حافظ کجاست"]),
+    ]
+    spec = embedder.to_spec()
+    assert (spec.model, spec.query_prefix, spec.passage_prefix) == (
+        E5_BASE_MODEL,
+        "query: ",
+        "passage: ",
+    )
+    assert create_embedder(spec).model_name == E5_BASE_MODEL
+
+
+def test_e5_base_index_refuses_e5_small(
+    tmp_path: Path, fake_st: type[FakeSentenceTransformer]
+) -> None:
+    path = _saved_index(tmp_path, SentenceTransformerEmbedder("e5-base"))
+    saved = load_index(path)
+    assert saved.embedder.model == E5_BASE_MODEL
+    assert len(retriever_from_saved(saved, SentenceTransformerEmbedder(E5_BASE_MODEL))) == 2
+    with pytest.raises(IndexFormatError, match="Rebuild the index"):
+        retriever_from_saved(saved, SentenceTransformerEmbedder())
+
+
+def test_cli_ingest_e5_base_alias(tmp_path: Path, fake_st: type[FakeSentenceTransformer]) -> None:
+    from persian_rag.cli import main
+
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "a.txt").write_text("کتاب فارسی\n", encoding="utf-8")
+    index = tmp_path / "index"
+    args = ["ingest", str(docs), "--index", str(index), "--embedder", "sentence-transformers"]
+    assert main([*args, "--model", "e5-base"]) == 0
+    spec = load_index(index).embedder
+    assert (spec.model, spec.query_prefix, spec.passage_prefix) == (
+        E5_BASE_MODEL,
+        "query: ",
+        "passage: ",
+    )
+    assert all(text.startswith("passage: ") for _, _, texts in fake_st.calls for text in texts)
 
 
 def test_health_reports_embedder(fake_st: type[FakeSentenceTransformer]) -> None:

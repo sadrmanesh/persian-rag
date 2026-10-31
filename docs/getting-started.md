@@ -62,6 +62,18 @@ remote = OpenAICompatibleEmbedder(model="text-embedding-3-small")  # reads OPENA
 
 From 0.4.0 the default `SentenceTransformerEmbedder` model is [`intfloat/multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small) (118M parameters, 384 dimensions). On Persian retrieval sets it is far ahead of the previous default, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, at the same size; see [Benchmarks](benchmarks.md#embedding-models).
 
+For more accuracy, use [`intfloat/multilingual-e5-base`](https://huggingface.co/intfloat/multilingual-e5-base) (278M parameters, 768 dimensions). The short names `e5-small` and `e5-base` work wherever a model name is accepted:
+
+```python
+SentenceTransformerEmbedder("e5-base")  # same as "intfloat/multilingual-e5-base"
+```
+
+```bash
+persian-rag ingest ./library --index .persian-rag --embedder sentence-transformers --model e5-base
+```
+
+e5-base scores 0.7657 nDCG@10 on MIRACL fa dev against 0.7461 for e5-small, and holds up much better on noisy queries, but it is about 2.4 times larger, its index is twice the size, and it encodes about 2.4 times slower on CPU. [Benchmarks](benchmarks.md#e5-small-or-e5-base) has the full comparison. The index stores the full model name, so `query`, `chat`, `eval`, and `serve` load e5-base again for an index built with it.
+
 E5 models expect `query: ` before questions and `passage: ` before documents. The embedder adds them for you:
 
 | `prefix` | Behaviour |
