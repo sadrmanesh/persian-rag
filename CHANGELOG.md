@@ -4,7 +4,7 @@ All notable changes to persian-rag are documented here. The format is based on [
 
 ## [Unreleased]
 
-## [0.4.0] - Unreleased
+## [0.4.0] - 2026-10-31
 
 ### Changed
 
