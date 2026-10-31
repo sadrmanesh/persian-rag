@@ -29,6 +29,15 @@ DEFAULT_ST_MODEL = "intfloat/multilingual-e5-small"
 LEGACY_ST_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 """Default sentence-transformers model before 0.4.0."""
 
+E5_BASE_MODEL = "intfloat/multilingual-e5-base"
+"""More accurate, larger option: 278M parameters and 768 dimensions."""
+
+ST_MODEL_ALIASES: dict[str, str] = {
+    "e5-small": DEFAULT_ST_MODEL,
+    "e5-base": E5_BASE_MODEL,
+}
+"""Short names accepted wherever a sentence-transformers model name is."""
+
 E5_QUERY_PREFIX = "query: "
 E5_PASSAGE_PREFIX = "passage: "
 _DEFAULT_OPENAI_MODEL = "text-embedding-3-small"
@@ -200,6 +209,10 @@ class SentenceTransformerEmbedder:
     The default model, ``intfloat/multilingual-e5-small``, is multilingual and
     was the best small model in the project's Persian measurements (see the
     benchmarks page). It is a default, not a claim about every corpus.
+    ``intfloat/multilingual-e5-base`` (alias ``"e5-base"``) is more accurate,
+    especially on noisy queries, at about 2.4 times the size, twice the vector
+    size, and about 2.4 times slower encoding on CPU. ``"e5-small"`` and
+    ``"e5-base"`` are accepted as short names; the full name is stored.
 
     Prefixes: E5 models expect ``"query: "`` before questions and
     ``"passage: "`` before stored text. ``prefix="auto"`` (the default) uses
@@ -232,6 +245,7 @@ class SentenceTransformerEmbedder:
                 "Install it with: pip install 'persian-rag[sentence-transformers]'"
             ) from exc
 
+        model_name = resolve_model_name(model_name)
         self.model_name = model_name
         self.batch_size = batch_size
         self.normalize_embeddings = normalize_embeddings
@@ -292,6 +306,15 @@ class SentenceTransformerEmbedder:
             show_progress_bar=False,
         )
         return [[float(item) for item in row] for row in encoded]
+
+
+def resolve_model_name(model_name: str) -> str:
+    """Expand a short name (``"e5-small"``, ``"e5-base"``) to the full model name.
+
+    Any other name is returned unchanged.
+    """
+
+    return ST_MODEL_ALIASES.get(model_name.strip().lower(), model_name)
 
 
 _E5_NAME_RE = re.compile(r"(^|[/_-])(m?e5)([-_]|$)", re.IGNORECASE)
@@ -430,7 +453,7 @@ def create_embedder(
             seed=spec.seed,
         )
     if spec.kind == "sentence-transformers":
-        model_name = spec.model or DEFAULT_ST_MODEL
+        model_name = resolve_model_name(spec.model or DEFAULT_ST_MODEL)
         if spec.query_prefix is None and spec.passage_prefix is None:
             # Index written before 0.4.0: its vectors were made without prefixes.
             if is_e5_model(model_name):

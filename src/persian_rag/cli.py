@@ -111,7 +111,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Model name for the selected embedder "
-            "(sentence-transformers default: intfloat/multilingual-e5-small)"
+            "(sentence-transformers default: intfloat/multilingual-e5-small; "
+            "the short names e5-small and e5-base also work)"
         ),
     )
     ingest.add_argument(

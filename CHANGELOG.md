@@ -4,6 +4,13 @@ All notable changes to persian-rag are documented here. The format is based on [
 
 ## [Unreleased]
 
+### Added
+
+- `intfloat/multilingual-e5-base` as a supported, more accurate embedding model. `SentenceTransformerEmbedder("e5-base")`, `--model e5-base`, and the full model name all work, with the E5 `query: `/`passage: ` prefixes added automatically. e5-small stays the default.
+- Short model names: `e5-small` and `e5-base` resolve to the full `intfloat/multilingual-e5-*` names wherever a `sentence-transformers` model name is accepted (Python, CLI, saved index specs, `run_benchmark.py`). Indexes store the full name.
+- `E5_BASE_MODEL`, `ST_MODEL_ALIASES`, and `resolve_model_name` in the public API.
+- e5-small against e5-base in the docs and README. nDCG@10, normalized text: MIRACL fa dev 0.7461 against 0.7657, PQuAD validation 0.9242 against 0.9247, persian-rag-bench 0.9881 against 1.0000. With perturbed queries (Arabic yeh and kaf, no half spaces, no normalization): MIRACL 0.6645 against 0.7089, PQuAD 0.8639 against 0.8906. e5-base is 278M parameters and 768 dimensions against 118M and 384, and encodes about 2.4 times slower on CPU.
+
 ## [0.4.0] - 2026-10-31
 
 ### Changed

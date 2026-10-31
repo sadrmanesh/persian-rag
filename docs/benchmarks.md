@@ -41,7 +41,8 @@ New in 0.4.0. The default `sentence-transformers` model changed from `paraphrase
 | Model | MIRACL fa dev | PQuAD validation | persian-rag-bench |
 |---|---:|---:|---:|
 | paraphrase-multilingual-MiniLM-L12-v2 (old default) | 0.4424 | 0.6437 | 0.8637 |
-| multilingual-e5-small with prefixes (new default) | **0.7461** | **0.9242** | **0.9881** |
+| multilingual-e5-small with prefixes (new default) | 0.7461 | 0.9242 | 0.9881 |
+| multilingual-e5-base with prefixes (`e5-base`) | **0.7657** | **0.9247** | **1.0000** |
 
 | Model | Set | MRR@10 | Recall@10 |
 |---|---|---:|---:|
@@ -49,6 +50,30 @@ New in 0.4.0. The default `sentence-transformers` model changed from `paraphrase
 | e5-small | MIRACL fa dev | 0.7138 | 0.9521 |
 | MiniLM-L12-v2 | PQuAD validation | 0.5905 | 0.8113 |
 | e5-small | PQuAD validation | 0.9042 | 0.9845 |
+| e5-base | MIRACL fa dev | 0.7369 | 0.9590 |
+| e5-base | PQuAD validation | 0.9043 | 0.9858 |
+
+### e5-small or e5-base
+
+`intfloat/multilingual-e5-base` is supported as the more accurate option (new in the next release). Use `SentenceTransformerEmbedder("e5-base")` or `--model e5-base`; the full name works too, and the E5 prefixes are added automatically.
+
+| | e5-small (default) | e5-base |
+|---|---:|---:|
+| Parameters | 118M | 278M |
+| Dimensions (index size) | 384 | 768 (2x) |
+| Model download | about 470 MB | about 1.1 GB |
+| CPU encoding speed, PQuAD paragraphs | 54 per second | 22 per second |
+| MIRACL fa dev, normalized | 0.7461 | **0.7657** |
+| MIRACL fa dev, raw | 0.7448 | **0.7653** |
+| MIRACL fa dev, perturbed queries | 0.6645 | **0.7089** |
+| PQuAD validation, normalized | 0.9242 | **0.9247** |
+| PQuAD validation, perturbed queries | 0.8639 | **0.8906** |
+| persian-rag-bench | 0.9881 | **1.0000** |
+| persian-rag-bench, spelling Hit@1 | 0.9167 | **1.0000** |
+
+Perturbed queries are written with Arabic yeh and kaf and with spaces instead of half spaces, and neither side is normalized; this is what text typed on an Arabic keyboard looks like. `persian_rag.normalize()` removes most of that difference, so the normalized rows are the ones to compare for a normal setup. The gain from e5-base is small on clean PQuAD questions and largest on MIRACL and on noisy queries. e5-base is a good choice when accuracy matters more than indexing time and memory; e5-small stays the default because it is much faster on CPU and close on clean text. Vectors from the two models are not compatible: switching models means rebuilding the index, and loading an e5-small index with e5-base is refused.
+
+The e5-base rows were measured with the same evaluation script on a Colab T4 GPU. e5-small gives identical scores on CPU and GPU, and the e5-base MIRACL and persian-rag-bench scores were reproduced on CPU (the bench with `run_benchmark.py --model e5-base`). Speed was measured with sentence-transformers 6.2.0 on 8 Xeon cores, 512 PQuAD paragraphs with prefixes, batches of 32, at most 512 tokens. A single short query takes about 6 ms with e5-small and 13 ms with e5-base.
 
 * **MIRACL fa dev**: 632 queries ranked against a pooled corpus of the 6,405 judged passages for those queries, not the full 2.2M-passage MIRACL corpus. The task is easier than the official one, so these numbers are not comparable with published MIRACL scores. They are useful for comparing models with each other.
 * **PQuAD validation**: 5,995 answerable questions ranked against the 1,103 unique paragraphs of the split.
@@ -62,6 +87,7 @@ pip install "persian-rag[sentence-transformers]"
 python benchmarks/run_benchmark.py --embedder sentence-transformers
 python benchmarks/run_benchmark.py --embedder sentence-transformers \
   --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+python benchmarks/run_benchmark.py --embedder sentence-transformers --model e5-base
 ```
 
 ## Reading the numbers
