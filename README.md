@@ -16,7 +16,7 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 **Live demo:** [persian-rag on Hugging Face Spaces](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) runs normalization and retrieval in the browser. **Benchmark dataset:** [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub.
 
-**Read more:** [Why RAG breaks on Persian text, and what I built to fix it](https://dev.to/sadrmanesh/why-rag-breaks-on-persian-text-and-what-i-built-to-fix-it-normalization-half-spaces-spelling-2jgm) on Dev.to
+**Read more:** [Why RAG breaks on Persian text, and what I built to fix it](https://dev.to/sadrmanesh/why-rag-breaks-on-persian-text-and-what-i-built-to-fix-it-normalization-half-spaces-spelling-2jgm) on Dev.to · [The design decisions that fixed it](https://www.linkedin.com/pulse/why-rag-quietly-fails-persian-text-design-decisions-fixed-sadrmanesh-wd4vf/) on LinkedIn
 
 ## خلاصه فارسی
 
