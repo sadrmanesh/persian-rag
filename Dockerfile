@@ -12,6 +12,8 @@ RUN python -m build --wheel --outdir /wheels
 FROM python:3.12-slim AS runtime
 # Add more extras at build time, for example:
 #   docker build --build-arg EXTRAS=server,pdf,docx,sentence-transformers .
+# With sentence-transformers, models (default intfloat/multilingual-e5-small)
+# are cached under HF_HOME in the /data volume, so they download only once.
 ARG EXTRAS=server,pdf,docx
 LABEL org.opencontainers.image.title="persian-rag" \
       org.opencontainers.image.description="Persian-first retrieval-augmented generation toolkit with an HTTP API" \
@@ -23,7 +25,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PERSIAN_RAG_PORT=8000
+    PERSIAN_RAG_PORT=8000 \
+    HF_HOME=/data/.cache/huggingface
 COPY --from=build /wheels /tmp/wheels
 RUN wheel="$(ls /tmp/wheels/*.whl)" \
     && pip install "${wheel}[${EXTRAS}]" \

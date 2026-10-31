@@ -8,7 +8,7 @@ persian-rag serve --index .persian-rag --host 127.0.0.1 --port 8000
 Or with Docker, from the image published on every release (see [Docker](docker.md)):
 
 ```bash
-docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.3.1
+docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.4.0
 ```
 
 Or from code:
@@ -27,7 +27,7 @@ uvicorn.run(app, host="127.0.0.1", port=8000)
 
 | Method | Path | Body | Returns |
 | --- | --- | --- | --- |
-| `GET` | `/health` | | status, version, chunk count, whether an LLM and reranker are set |
+| `GET` | `/health` | | status, version, chunk count, whether an LLM and reranker are set, and `embedder` (`kind`, `model`, `dimension`, `query_prefix`, `passage_prefix`) |
 | `POST` | `/retrieve` | `{"query": "...", "k": 5, "mode": "hybrid"}` | `{"query", "results": [...]}` |
 | `POST` | `/query` | `{"question": "...", "k": 5, "mode": "hybrid", "include_prompt": false}` | `{"question", "answer", "contexts", "citations", "uncited", "prompt"}` |
 | `POST` | `/chat` | `{"message": "...", "session_id": null, "k": 5, "reset": false}` | the `/query` fields plus `session_id`, `standalone_question`, `turn` |

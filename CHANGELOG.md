@@ -4,11 +4,34 @@ All notable changes to persian-rag are documented here. The format is based on [
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-31
+
+### Changed
+
+- **Breaking default:** `SentenceTransformerEmbedder()` and `persian-rag ingest --embedder sentence-transformers` now use `intfloat/multilingual-e5-small` instead of `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`. Both have 118M parameters and 384 dimensions, but their vectors are not compatible. Code that names a model, and indexes built with any model, keep working, because indexes store their model. Rebuild indexes made with the old default to use the new model, or pass `--model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` to keep it.
+- The Docker image sets `HF_HOME=/data/.cache/huggingface`, so models are cached in the `/data` volume when the image is built with the `sentence-transformers` extra.
+- `benchmarks/run_benchmark.py` defaults to e5-small for `--embedder sentence-transformers` and has a `--prefix` option.
+- The package version is now 0.4.0.
+
 ### Added
 
+- E5 query and passage prefixes. `SentenceTransformerEmbedder(prefix="auto")` adds `query: ` and `passage: ` for E5 models (`multilingual-e5-*`, `e5-*`) and `persian-rag-embed` models, and nothing for other models. When a model defines non-empty `query` and `document` prompts, those are used through `encode_query` and `encode_document`. `prefix="e5"` and `prefix="none"` force the choice, and `query_prefix` and `passage_prefix` set custom strings.
+- `persian-rag ingest --prefix auto|e5|none`, `--query-prefix`, and `--passage-prefix`.
+- Indexes store the resolved prefixes, so a saved index is always queried the way it was built. Indexes from earlier versions have no stored prefixes and are queried without them; an E5 index from before 0.4.0 also gives a warning that suggests a rebuild.
+- Model mismatch detection: loading an index with an embedder of a different kind or model raises `IndexFormatError` with a rebuild hint, and different prefixes give a warning.
+- `GET /health` returns an `embedder` object with `kind`, `model`, `dimension`, `query_prefix`, and `passage_prefix`.
+- `DEFAULT_ST_MODEL`, `LEGACY_ST_MODEL`, `is_e5_model`, and `resolve_prefixes` in the public API.
 - An optional Docker Hub job in the release workflow. When the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets are set, it copies the released GHCR image to `docker.io/<username>/persian-rag` with the same tags. Without them it skips.
 - Links to the [live demo](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) on Hugging Face Spaces and the [benchmark dataset](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub in the README and docs, with a Spaces badge.
 - `.github/workflows/mirror.yml`, which mirrors `main` and tags to `gitlab.com/sadrmanesh/persian-rag` when the `GITLAB_TOKEN` secret is set, and skips cleanly otherwise.
+- Embedding model results in the docs and README. nDCG@10 on CPU with normalized text, MiniLM-L12-v2 against e5-small with prefixes:
+  - MIRACL fa dev (632 queries, pooled corpus of 6,405 judged passages, not the full MIRACL corpus, so not comparable with published MIRACL scores): 0.4424 against 0.7461 (MRR@10 0.4271 against 0.7138, Recall@10 0.6356 against 0.9521).
+  - PQuAD validation (5,995 questions, 1,103 paragraphs): 0.6437 against 0.9242 (MRR@10 0.5905 against 0.9042, Recall@10 0.8113 against 0.9845).
+  - persian-rag-bench, dense: 0.8637 against 0.9881. Without prefixes e5-small scores 0.9824, and 0.8333 instead of 0.9167 Hit@1 on the spelling subset.
+
+### Fixed
+
+- `SentenceTransformerEmbedder` no longer logs a deprecation warning on newer sentence-transformers versions, which renamed `get_sentence_embedding_dimension` to `get_embedding_dimension`.
 
 ## [0.3.1] - 2026-10-30
 
@@ -86,6 +109,7 @@ All notable changes to persian-rag are documented here. The format is based on [
 - `persian-rag ingest` and `persian-rag query` commands, plus a JSON index.
 - Unit tests, Ruff, mypy, and a GitHub Actions workflow.
 
+[0.4.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.4.0
 [0.3.1]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.3.0
 [0.2.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.2.0

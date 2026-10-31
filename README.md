@@ -20,14 +20,14 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 ## خلاصه فارسی
 
-persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. سرور HTTP به صورت ایمیج داکر `ghcr.io/sadrmanesh/persian-rag` هم منتشر می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است. [نسخه نمایشی زنده](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) در Hugging Face Spaces و [مجموعه داده محک](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) در Hugging Face Hub هم در دسترس هستند.
+persian-rag یک جعبه ابزار پایتون برای ساخت سامانه های بازیابی و تولید پاسخ روی متن فارسی است. نویسه های عربی و فارسی، فاصله ها، رقم ها و نشانه گذاری را یکدست می کند. فایل های متنی، مارک داون، HTML، PDF و Word و صفحه های وب را می خواند، متن اصلی صفحه های وب را جدا می کند و ترتیب وارونه متن فارسی در PDF را اصلاح می کند. متن را تکه تکه می کند و با BM25، بردارهای معنایی یا ترکیب هر دو جست و جو می کند و می تواند پرسش را با املاهای دیگر فارسی (مانند اتاق و اطاق یا تهران و طهران) گسترش دهد. بردارها را در حافظه، FAISS، Qdrant، pgvector، Elasticsearch یا OpenSearch نگه می دارد و فقط سندهای تغییر کرده را دوباره ایندکس می کند. نتیجه را با رتبه بندی دوباره بهتر می کند، پاسخ را همراه ارجاع دقیق به منبع می دهد، گفت و گوی چند نوبتی را پشتیبانی می کند و کیفیت بازیابی و پاسخ را می سنجد. از نسخه 0.4.0 مدل بردارساز پیش فرض `intfloat/multilingual-e5-small` با پیشوندهای E5 است. تولید پاسخ با تابع دلخواه شما یا اتصال های آماده OpenAI و Ollama انجام می شود. سرور HTTP به صورت ایمیج داکر `ghcr.io/sadrmanesh/persian-rag` هم منتشر می شود. راهنمای کامل فارسی در [سایت مستندات](https://sadrmanesh.github.io/persian-rag/fa/) و پوشه docs است. [نسخه نمایشی زنده](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) در Hugging Face Spaces و [مجموعه داده محک](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) در Hugging Face Hub هم در دسترس هستند.
 
 ## Features
 
 - **Normalization** for Persian: Arabic Yeh and Kaf, presentation forms, ZWNJ, digits, optional diacritics, and punctuation.
 - **Loaders** for `.txt`, `.md`, `.html`, `.pdf`, `.docx`, and web URLs. HTML goes through readability-style main-content extraction, Markdown front matter becomes metadata and files can be split by heading, and PDF text in visual (reversed) order is detected and repaired.
 - **Chunking**: fixed windows with overlap, sentence packing, and recursive separators.
-- **Embeddings** through a small protocol, with adapters for `sentence-transformers` and any OpenAI-compatible API, plus a persistent embedding cache.
+- **Embeddings** through a small protocol, with adapters for `sentence-transformers` (default `intfloat/multilingual-e5-small`, with automatic E5 query and passage prefixes) and any OpenAI-compatible API, plus a persistent embedding cache. Indexes remember their model, and loading one with a different model is refused.
 - **Vector stores**: in-memory, FAISS, Qdrant, PostgreSQL with pgvector, and Elasticsearch or OpenSearch (which also serve BM25 for hybrid search, without a client package).
 - **Incremental indexing**: content hashes, upserts, and deletions, so only changed documents are re-embedded.
 - **Hybrid retrieval** with BM25 and [reciprocal rank fusion](https://plg.uwaterloo.ca/gvcormac/cormacksigir09-rrf.pdf), and an optional query result cache.
@@ -72,8 +72,8 @@ Every release publishes the HTTP API as a multi-architecture image (`linux/amd64
 
 ```bash
 docker run --rm -v "$PWD/library:/library:ro" -v persian-rag-data:/data \
-  ghcr.io/sadrmanesh/persian-rag:0.3.1 ingest /library --index /data/index
-docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.3.1
+  ghcr.io/sadrmanesh/persian-rag:0.4.0 ingest /library --index /data/index
+docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.4.0
 ```
 
 Tags are `X.Y.Z`, `X.Y`, and `latest`. The container runs as a non-root user and has a health check on `/health`. See [Docker](https://sadrmanesh.github.io/persian-rag/docker/) for language models, custom extras, and building the image yourself.
@@ -103,7 +103,9 @@ for item in result.contexts:
     print(round(item.score, 4), item.text)
 ```
 
-`HashingEmbedder` is a deterministic character n-gram hash for tests and offline checks. For semantic search use `SentenceTransformerEmbedder` (for example `"sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"`) or `OpenAICompatibleEmbedder`. The same flow is in [`examples/quickstart.py`](examples/quickstart.py).
+`HashingEmbedder` is a deterministic character n-gram hash for tests and offline checks. For semantic search use `SentenceTransformerEmbedder` (default model `intfloat/multilingual-e5-small`, with the E5 `query: `/`passage: ` prefixes added for you) or `OpenAICompatibleEmbedder`. The same flow is in [`examples/quickstart.py`](examples/quickstart.py).
+
+> **Upgrading to 0.4.0:** the default `sentence-transformers` model changed from `paraphrase-multilingual-MiniLM-L12-v2` to `intfloat/multilingual-e5-small`. Existing indexes keep working with the model they were built with. Rebuild indexes made with the old default to use the new one, or pass `--model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` to keep it. See [Upgrading from 0.3.x](https://sadrmanesh.github.io/persian-rag/getting-started/#upgrading-from-03x).
 
 ## Usage
 
@@ -283,7 +285,7 @@ persian-rag eval eval.jsonl --index .persian-rag --k 1 3 5 10
 persian-rag serve --index .persian-rag --port 8000
 ```
 
-`ingest` reads `.txt`, `.md`, `.html`, `.pdf`, `.docx`, and URLs, skips hidden files, and writes a UTF-8 JSON index without API keys. Useful flags: `--embedder hashing|sentence-transformers|openai`, `--strategy`, `--chunk-size`, `--rtl-fix`, `--split-pages`, `--split-sections`, `--update`, `--mode`, `--expand rules|llm`, `--rerank cross-encoder|llm`, `--llm openai|ollama`, `--citations`, and `--prompt-lang fa|en`. Run `persian-rag <command> --help` for the rest.
+`ingest` reads `.txt`, `.md`, `.html`, `.pdf`, `.docx`, and URLs, skips hidden files, and writes a UTF-8 JSON index without API keys. Useful flags: `--embedder hashing|sentence-transformers|openai`, `--model`, `--prefix auto|e5|none`, `--strategy`, `--chunk-size`, `--rtl-fix`, `--split-pages`, `--split-sections`, `--update`, `--mode`, `--expand rules|llm`, `--rerank cross-encoder|llm`, `--llm openai|ollama`, `--citations`, and `--prompt-lang fa|en`. Run `persian-rag <command> --help` for the rest.
 
 ## Benchmarks
 
@@ -295,6 +297,15 @@ persian-rag serve --index .persian-rag --port 8000
 | sparse + rewrite | 0.952 | 0.964 | 0.833 |
 | hybrid | 0.952 | 0.964 | 0.833 |
 | hybrid + rewrite | 0.952 | 0.964 | 0.833 |
+
+With `--embedder sentence-transformers`, the 0.4.0 default model `intfloat/multilingual-e5-small` (with E5 prefixes) is far ahead of the previous default `paraphrase-multilingual-MiniLM-L12-v2` at the same size (nDCG@10, measured on CPU):
+
+| Model | MIRACL fa dev* | PQuAD validation | persian-rag-bench |
+|---|---:|---:|---:|
+| paraphrase-multilingual-MiniLM-L12-v2 (old default) | 0.4424 | 0.6437 | 0.8637 |
+| multilingual-e5-small with prefixes (new default) | 0.7461 | 0.9242 | 0.9881 |
+
+\* 632 queries against a pooled corpus of 6,405 judged passages, not the full MIRACL corpus, so not comparable with published MIRACL scores.
 
 Full table, latency, and method: [Benchmarks](https://sadrmanesh.github.io/persian-rag/benchmarks/). The same corpus and questions are on the Hugging Face Hub as [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench).
 

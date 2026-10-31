@@ -7,6 +7,7 @@ not re-embed the corpus. Query embedding still needs the same embedder.
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -184,6 +185,8 @@ def retriever_from_saved(saved: SavedIndex, embedder: Embedder | None = None) ->
     """
 
     model = embedder if embedder is not None else create_embedder(saved.embedder)
+    if embedder is not None:
+        check_embedder_matches(saved.embedder, embedder)
     if model.dimension != saved.embedder.dimension:
         raise IndexFormatError(
             "Embedder dimension does not match the index: "
@@ -192,6 +195,46 @@ def retriever_from_saved(saved: SavedIndex, embedder: Embedder | None = None) ->
     retriever = HybridRetriever(model, normalize_config=saved.normalize)
     retriever.add_chunks(saved.chunks, embeddings=saved.embeddings)
     return retriever
+
+
+def check_embedder_matches(saved: EmbedderSpec, embedder: Embedder) -> None:
+    """Refuse an embedder that differs from the one the index was built with.
+
+    Two models can share a vector size (both the old and the new default have
+    384 dimensions), so a dimension check alone would let a mismatched query
+    model through and silently return poor results. Embedders without
+    ``to_spec()`` are not checked.
+    """
+
+    to_spec = getattr(embedder, "to_spec", None)
+    if not callable(to_spec):
+        return
+    try:
+        current = to_spec()
+    except (AttributeError, TypeError, ValueError):
+        return
+    if not isinstance(current, EmbedderSpec):
+        return
+    if current.kind != saved.kind:
+        raise IndexFormatError(
+            f"The index was built with a {saved.kind} embedder, not {current.kind}. "
+            "Rebuild it with 'persian-rag ingest' or load it with a matching embedder."
+        )
+    if saved.kind != "hashing" and saved.model and current.model and saved.model != current.model:
+        raise IndexFormatError(
+            f"The index was built with {saved.model}, but the embedder uses {current.model}. "
+            "Rebuild the index with 'persian-rag ingest', or load it with the same model."
+        )
+    if saved.kind == "sentence-transformers":
+        saved_prefixes = (saved.query_prefix or "", saved.passage_prefix or "")
+        current_prefixes = (current.query_prefix or "", current.passage_prefix or "")
+        if saved_prefixes != current_prefixes:
+            warnings.warn(
+                f"Prefixes differ from the index: built with {saved_prefixes!r}, "
+                f"querying with {current_prefixes!r}. Results may be worse.",
+                UserWarning,
+                stacklevel=3,
+            )
 
 
 def _as_float(value: object) -> float:

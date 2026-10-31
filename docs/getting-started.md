@@ -54,9 +54,45 @@ for context in answer.contexts:
 ```python
 from persian_rag import OpenAICompatibleEmbedder, SentenceTransformerEmbedder
 
-local = SentenceTransformerEmbedder("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+local = SentenceTransformerEmbedder()  # intfloat/multilingual-e5-small
 remote = OpenAICompatibleEmbedder(model="text-embedding-3-small")  # reads OPENAI_API_KEY
 ```
+
+## Embedding models and prefixes
+
+From 0.4.0 the default `SentenceTransformerEmbedder` model is [`intfloat/multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small) (118M parameters, 384 dimensions). On Persian retrieval sets it is far ahead of the previous default, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, at the same size; see [Benchmarks](benchmarks.md#embedding-models).
+
+E5 models expect `query: ` before questions and `passage: ` before documents. The embedder adds them for you:
+
+| `prefix` | Behaviour |
+| --- | --- |
+| `"auto"` (default) | Use the model's own `query`/`document` prompts when it defines non-empty ones. Otherwise add the E5 prefixes for E5 models (`intfloat/multilingual-e5-*`, `e5-*`) and for `persian-rag-embed` models, and nothing for every other model. |
+| `"e5"` | Always add `query: ` and `passage: `. |
+| `"none"` | Never add a prefix. |
+
+`query_prefix` and `passage_prefix` override the result:
+
+```python
+SentenceTransformerEmbedder("intfloat/multilingual-e5-base")  # E5 prefixes
+SentenceTransformerEmbedder("BAAI/bge-m3")  # no prefix
+SentenceTransformerEmbedder("my-org/my-e5-copy", prefix="e5")  # force E5 prefixes
+SentenceTransformerEmbedder("my-org/model", query_prefix="Query: ", passage_prefix="")
+```
+
+When the prefixes match the model's own prompts, the embedder calls `encode_query` and `encode_document`, so the model's prompt settings are used as they are. The resolved prefixes are stored in the index, so a saved index is always queried the way it was built.
+
+## Upgrading from 0.3.x
+
+* Code and indexes that name a model keep working. Indexes store the model they were built with, and `persian-rag query`, `chat`, `eval`, and `serve` load that model.
+* An index built before 0.4.0 has no stored prefixes, so it is queried without prefixes, exactly as it was built. An E5 index from before 0.4.0 also gets a warning: rebuild it with `persian-rag ingest` to get the prefixes and better retrieval.
+* `SentenceTransformerEmbedder()` with no model now loads e5-small. Vectors from the two models are not compatible, even though both have 384 dimensions. Rebuild any index you made with the old default, or keep the old model explicitly:
+
+```bash
+persian-rag ingest ./library --index .persian-rag --embedder sentence-transformers \
+  --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
+
+* Loading an index with an embedder for a different model now raises `IndexFormatError` instead of returning wrong results. Different prefixes give a warning.
 
 ## From files
 

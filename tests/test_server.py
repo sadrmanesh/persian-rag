@@ -21,6 +21,8 @@ def test_health_retrieve_and_query(corpus_retriever: HybridRetriever) -> None:
     assert health["status"] == "ok"
     assert health["chunks"] == 4
     assert health["llm"] is True and health["reranker"] is False
+    assert health["embedder"]["kind"] == "hashing"
+    assert health["embedder"]["dimension"] == corpus_retriever.embedder.dimension
 
     found = client.post("/retrieve", json={"query": "حافظ شیراز", "k": 2}).json()
     assert found["results"][0]["document_id"] == "hafez"

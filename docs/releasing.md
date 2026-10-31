@@ -18,7 +18,7 @@ If neither is configured, the build still runs, the publish job prints a notice,
 1. Update `version` in `pyproject.toml` and `src/persian_rag/version.py`.
 2. Add a section to `CHANGELOG.md`.
 3. Merge to `main` with green CI.
-4. Tag and push: `git tag v0.3.1 && git push origin v0.3.1`.
+4. Tag and push: `git tag v0.4.0 && git push origin v0.4.0`.
 
 The release workflow also copies the GHCR image, for every platform, to Docker Hub as `docker.io/<DOCKERHUB_USERNAME>/persian-rag` with the same `X.Y.Z`, `X.Y`, and `latest` tags. This job runs only when the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets are set, and skips with a notice otherwise.
 

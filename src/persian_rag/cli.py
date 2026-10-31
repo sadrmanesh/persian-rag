@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING, Literal, cast
 from persian_rag.chunk import ChunkingConfig, ChunkStrategy
 from persian_rag.documents import load_documents
 from persian_rag.embeddings import (
+    DEFAULT_ST_MODEL,
     Embedder,
     EmbedderSpec,
     HashingEmbedder,
     OpenAICompatibleEmbedder,
+    PrefixMode,
     SentenceTransformerEmbedder,
     create_embedder,
 )
@@ -104,7 +106,27 @@ def build_parser() -> argparse.ArgumentParser:
         default="hashing",
         help="hashing is offline and not semantic (default)",
     )
-    ingest.add_argument("--model", default=None, help="Model name for the selected embedder")
+    ingest.add_argument(
+        "--model",
+        default=None,
+        help=(
+            "Model name for the selected embedder "
+            "(sentence-transformers default: intfloat/multilingual-e5-small)"
+        ),
+    )
+    ingest.add_argument(
+        "--prefix",
+        choices=("auto", "e5", "none"),
+        default="auto",
+        help=(
+            "Query/passage prefixes for sentence-transformers: auto uses model prompts or "
+            "'query: '/'passage: ' for E5 models (default), e5 forces them, none turns them off"
+        ),
+    )
+    ingest.add_argument("--query-prefix", default=None, help="Custom text put before queries")
+    ingest.add_argument(
+        "--passage-prefix", default=None, help="Custom text put before stored passages"
+    )
     ingest.add_argument(
         "--dimension",
         type=int,
@@ -587,9 +609,15 @@ def _embedder_from_args(
     if kind == "hashing":
         return HashingEmbedder(dimension=dimension or 256)
     if kind == "sentence-transformers":
-        if model is None:
-            return SentenceTransformerEmbedder()
-        return SentenceTransformerEmbedder(model_name=model)
+        prefix = cast(PrefixMode, _choice(args.prefix, ("auto", "e5", "none"), "prefix"))
+        query_prefix = args.query_prefix if isinstance(args.query_prefix, str) else None
+        passage_prefix = args.passage_prefix if isinstance(args.passage_prefix, str) else None
+        return SentenceTransformerEmbedder(
+            model_name=model or DEFAULT_ST_MODEL,
+            prefix=prefix,
+            query_prefix=query_prefix,
+            passage_prefix=passage_prefix,
+        )
     return OpenAICompatibleEmbedder(
         model=model or _DEFAULT_OPENAI_EMBEDDING_MODEL,
         base_url=_base_url(args.base_url),
@@ -609,6 +637,8 @@ def _spec_with_base_url(spec: EmbedderSpec, base_url: object) -> EmbedderSpec:
         ngram_min=spec.ngram_min,
         ngram_max=spec.ngram_max,
         seed=spec.seed,
+        query_prefix=spec.query_prefix,
+        passage_prefix=spec.passage_prefix,
     )
 
 
