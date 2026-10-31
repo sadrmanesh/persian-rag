@@ -62,7 +62,7 @@ remote = OpenAICompatibleEmbedder(model="text-embedding-3-small")  # reads OPENA
 
 From 0.4.0 the default `SentenceTransformerEmbedder` model is [`intfloat/multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small) (118M parameters, 384 dimensions). On Persian retrieval sets it is far ahead of the previous default, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, at the same size; see [Benchmarks](benchmarks.md#embedding-models).
 
-For more accuracy, use [`intfloat/multilingual-e5-base`](https://huggingface.co/intfloat/multilingual-e5-base) (278M parameters, 768 dimensions). The short names `e5-small` and `e5-base` work wherever a model name is accepted:
+For more accuracy, use [`intfloat/multilingual-e5-base`](https://huggingface.co/intfloat/multilingual-e5-base) (278M parameters, 768 dimensions). The short names `e5-small` and `e5-base` work wherever a `sentence-transformers` model name is accepted:
 
 ```python
 SentenceTransformerEmbedder("e5-base")  # same as "intfloat/multilingual-e5-base"

@@ -62,7 +62,7 @@ remote = OpenAICompatibleEmbedder(model="text-embedding-3-small")
 
 از نسخه 0.4.0 مدل پیش فرض `SentenceTransformerEmbedder` مدل [`intfloat/multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small) است (۱۱۸ میلیون پارامتر و ۳۸۴ بعد). این مدل در مجموعه های بازیابی فارسی با همان اندازه بسیار بهتر از مدل پیش فرض قبلی، `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`، کار می کند. عددها در [محک ها](benchmarks.md#embedding-models) آمده اند.
 
-برای دقت بیشتر از [`intfloat/multilingual-e5-base`](https://huggingface.co/intfloat/multilingual-e5-base) استفاده کنید (۲۷۸ میلیون پارامتر و ۷۶۸ بعد). نام های کوتاه `e5-small` و `e5-base` هر جا که نام مدل پذیرفته می شود کار می کنند:
+برای دقت بیشتر از [`intfloat/multilingual-e5-base`](https://huggingface.co/intfloat/multilingual-e5-base) استفاده کنید (۲۷۸ میلیون پارامتر و ۷۶۸ بعد). نام های کوتاه `e5-small` و `e5-base` هر جا که نام یک مدل `sentence-transformers` پذیرفته می شود کار می کنند:
 
 ```python
 SentenceTransformerEmbedder("e5-base")  # same as "intfloat/multilingual-e5-base"
