@@ -18,7 +18,9 @@ Accepts any mix of files, folders, and `http(s)` URLs. Reads `.txt`, `.md`, `.ht
 | Flag | Default | Purpose |
 | --- | --- | --- |
 | `--embedder` | `hashing` | `hashing`, `sentence-transformers`, or `openai` |
-| `--model`, `--dimension`, `--base-url` | | Embedder settings |
+| `--model`, `--dimension`, `--base-url` | | Embedder settings. The `sentence-transformers` default model is `intfloat/multilingual-e5-small` |
+| `--prefix` | `auto` | Query and passage prefixes for `sentence-transformers`: `auto` (E5 prefixes for E5 models only), `e5`, or `none` ([details](getting-started.md#embedding-models-and-prefixes)) |
+| `--query-prefix`, `--passage-prefix` | | Custom prefixes that override `--prefix` |
 | `--strategy` | `recursive` | `fixed`, `sentence`, or `recursive` |
 | `--chunk-size`, `--overlap`, `--sentence-overlap` | 800, 120, 1 | Chunking |
 | `--digits`, `--zwnj`, `--remove-diacritics`, `--no-half-space` | | Normalization |

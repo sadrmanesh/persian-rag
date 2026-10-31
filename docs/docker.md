@@ -8,8 +8,8 @@ ghcr.io/sadrmanesh/persian-rag
 
 | Tag | Points to |
 | --- | --- |
-| `0.3.1` | That exact release |
-| `0.3` | The newest 0.3.x release |
+| `0.4.0` | That exact release |
+| `0.4` | The newest 0.4.x release |
 | `latest` | The newest release |
 
 Images are built for `linux/amd64` and `linux/arm64`. They contain `persian-rag[server,pdf,docx]` on Python 3.12, run as a non-root user (uid 10001), and listen on port 8000. The working directory and volume is `/data`, and the default command serves the index in `/data/index`.
@@ -24,11 +24,11 @@ docker volume create persian-rag-data
 docker run --rm \
   -v "$PWD/library:/library:ro" \
   -v persian-rag-data:/data \
-  ghcr.io/sadrmanesh/persian-rag:0.3.1 ingest /library --index /data/index
+  ghcr.io/sadrmanesh/persian-rag:0.4.0 ingest /library --index /data/index
 
 docker run -d --name persian-rag -p 8000:8000 \
   -v persian-rag-data:/data \
-  ghcr.io/sadrmanesh/persian-rag:0.3.1
+  ghcr.io/sadrmanesh/persian-rag:0.4.0
 ```
 
 ```bash
@@ -46,7 +46,7 @@ The image includes the OpenAI-compatible and Ollama adapters. Pass the key as an
 ```bash
 docker run -d -p 8000:8000 -v persian-rag-data:/data \
   -e OPENAI_API_KEY \
-  ghcr.io/sadrmanesh/persian-rag:0.3.1 \
+  ghcr.io/sadrmanesh/persian-rag:0.4.0 \
   serve --index /data/index --host 0.0.0.0 --port 8000 --llm openai --citations
 ```
 
@@ -63,6 +63,6 @@ docker build -t persian-rag .
 docker build -t persian-rag --build-arg EXTRAS=server,pdf,docx,sentence-transformers .
 ```
 
-`EXTRAS` selects the [extras](getting-started.md) installed in the image. The published image leaves out `sentence-transformers`, which adds a few gigabytes; build your own image with it to serve an index made with `--embedder sentence-transformers`.
+`EXTRAS` selects the [extras](getting-started.md) installed in the image. The published image leaves out `sentence-transformers`, which adds a few gigabytes; build your own image with it to serve an index made with `--embedder sentence-transformers`. The image sets `HF_HOME=/data/.cache/huggingface`, so the model (for example the default `intfloat/multilingual-e5-small`) is downloaded once into the `/data` volume and reused after a restart. `GET /health` reports the model the index was built with.
 
 The server has no authentication. Put it behind your own gateway before exposing it.

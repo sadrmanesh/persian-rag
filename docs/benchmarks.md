@@ -34,6 +34,36 @@ persian-rag 0.3.0, Python 3.12, hashing embedder (512 dimensions, character 2 to
 | dense + rewrite | 0.952 | 0.976 | 0.957 | 0.962 | 0.917 | 1.49 | 2.91 |
 | hybrid + rewrite | 0.952 | 0.976 | 0.964 | 0.967 | 0.833 | 1.55 | 3.10 |
 
+## Embedding models
+
+New in 0.4.0. The default `sentence-transformers` model changed from `paraphrase-multilingual-MiniLM-L12-v2` to `intfloat/multilingual-e5-small`, with E5 `query: `/`passage: ` prefixes. Both models have 118M parameters and 384 dimensions. nDCG@10 on CPU, sentence-transformers 6.2.0, normalized cosine similarity, queries and passages normalized with `persian_rag.normalize()`, full-corpus ranking:
+
+| Model | MIRACL fa dev | PQuAD validation | persian-rag-bench |
+|---|---:|---:|---:|
+| paraphrase-multilingual-MiniLM-L12-v2 (old default) | 0.4424 | 0.6437 | 0.8637 |
+| multilingual-e5-small with prefixes (new default) | **0.7461** | **0.9242** | **0.9881** |
+
+| Model | Set | MRR@10 | Recall@10 |
+|---|---|---:|---:|
+| MiniLM-L12-v2 | MIRACL fa dev | 0.4271 | 0.6356 |
+| e5-small | MIRACL fa dev | 0.7138 | 0.9521 |
+| MiniLM-L12-v2 | PQuAD validation | 0.5905 | 0.8113 |
+| e5-small | PQuAD validation | 0.9042 | 0.9845 |
+
+* **MIRACL fa dev**: 632 queries ranked against a pooled corpus of the 6,405 judged passages for those queries, not the full 2.2M-passage MIRACL corpus. The task is easier than the official one, so these numbers are not comparable with published MIRACL scores. They are useful for comparing models with each other.
+* **PQuAD validation**: 5,995 answerable questions ranked against the 1,103 unique paragraphs of the split.
+* **persian-rag-bench**: the 34 documents and 42 questions above, dense retrieval only.
+* The prefixes matter: on persian-rag-bench e5-small without prefixes scores 0.9824 nDCG@10 and 0.8333 Hit@1 on the spelling subset, against 0.9881 and 0.9167 with them.
+
+Reproduce the persian-rag-bench rows with `run_benchmark.py` (the `dense` row):
+
+```bash
+pip install "persian-rag[sentence-transformers]"
+python benchmarks/run_benchmark.py --embedder sentence-transformers
+python benchmarks/run_benchmark.py --embedder sentence-transformers \
+  --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
+
 ## Reading the numbers
 
 * BM25 alone misses five of the twelve misspelled queries, because a different spelling is a different token. The [query rewriter](query-rewriting.md) recovers most of them: sparse Hit@1 on the spelling subset goes from 0.583 to 0.833, and overall Hit@1 from 0.881 to 0.952.

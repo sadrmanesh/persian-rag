@@ -18,6 +18,8 @@ def test_sentence_transformer_embedder_returns_vectors() -> None:
     from persian_rag.embeddings import SentenceTransformerEmbedder
 
     embedder = SentenceTransformerEmbedder()
+    assert embedder.model_name == "intfloat/multilingual-e5-small"
+    assert (embedder.query_prefix, embedder.passage_prefix) == ("query: ", "passage: ")
     vector = embedder.embed_query("سلام، حال شما چطور است؟")
     batch = embedder.embed_documents(["سلام", "کتاب فارسی"])
     assert len(vector) == embedder.dimension

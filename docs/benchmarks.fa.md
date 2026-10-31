@@ -34,6 +34,36 @@ qa = load_dataset("sadrmanesh/persian-rag-bench", "qa", split="test")
 | dense + rewrite | 0.952 | 0.976 | 0.957 | 0.962 | 0.917 | 1.49 | 2.91 |
 | hybrid + rewrite | 0.952 | 0.976 | 0.964 | 0.967 | 0.833 | 1.55 | 3.10 |
 
+## مدل های بردارساز {#embedding-models}
+
+از نسخه 0.4.0 مدل پیش فرض `sentence-transformers` از `paraphrase-multilingual-MiniLM-L12-v2` به `intfloat/multilingual-e5-small` با پیشوندهای `query: ` و `passage: ` تغییر کرده است. هر دو مدل ۱۱۸ میلیون پارامتر و ۳۸۴ بعد دارند. عددها nDCG@10 هستند، روی CPU با sentence-transformers 6.2.0، شباهت کسینوسی بردارهای نرمال شده، پرسش ها و سندهای یکدست شده با `persian_rag.normalize()` و رتبه بندی روی کل مجموعه:
+
+| مدل | MIRACL fa dev | PQuAD validation | persian-rag-bench |
+|---|---:|---:|---:|
+| paraphrase-multilingual-MiniLM-L12-v2 (پیش فرض قبلی) | 0.4424 | 0.6437 | 0.8637 |
+| multilingual-e5-small با پیشوند (پیش فرض جدید) | **0.7461** | **0.9242** | **0.9881** |
+
+| مدل | مجموعه | MRR@10 | Recall@10 |
+|---|---|---:|---:|
+| MiniLM-L12-v2 | MIRACL fa dev | 0.4271 | 0.6356 |
+| e5-small | MIRACL fa dev | 0.7138 | 0.9521 |
+| MiniLM-L12-v2 | PQuAD validation | 0.5905 | 0.8113 |
+| e5-small | PQuAD validation | 0.9042 | 0.9845 |
+
+* **MIRACL fa dev**: ۶۳۲ پرسش روی مجموعه ای از ۶٬۴۰۵ متن داوری شده برای همین پرسش ها، نه کل مجموعه ۲.۲ میلیونی MIRACL. این کار از نسخه رسمی ساده تر است، پس این عددها با نتیجه های منتشر شده MIRACL قابل مقایسه نیستند و فقط برای مقایسه مدل ها با هم به کار می آیند.
+* **PQuAD validation**: ۵٬۹۹۵ پرسش پاسخ دار روی ۱٬۱۰۳ بند یکتای این بخش.
+* **persian-rag-bench**: همان ۳۴ سند و ۴۲ پرسش بالا، فقط بازیابی برداری.
+* پیشوندها مهم هستند: در persian-rag-bench مدل e5-small بدون پیشوند به nDCG@10 برابر 0.9824 و Hit@1 املایی 0.8333 می رسد و با پیشوند به 0.9881 و 0.9167.
+
+سطرهای persian-rag-bench را با `run_benchmark.py` (سطر `dense`) دوباره بسازید:
+
+```bash
+pip install "persian-rag[sentence-transformers]"
+python benchmarks/run_benchmark.py --embedder sentence-transformers
+python benchmarks/run_benchmark.py --embedder sentence-transformers \
+  --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
+
 ## تفسیر
 
 * BM25 به تنهایی پنج پرسش از دوازده پرسش املایی را از دست می دهد، چون املای دیگر یک واژه برای آن واژه ای دیگر است. [بازنویس پرسش](query-rewriting.md) بیشتر آنها را بازمی گرداند: Hit@1 روش واژگانی روی پرسش های املایی از 0.583 به 0.833 و در کل از 0.881 به 0.952 می رسد.

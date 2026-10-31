@@ -18,6 +18,9 @@ persian-rag ingest ./library --index .persian-rag --update
 | گزینه | پیش فرض | کاربرد |
 | --- | --- | --- |
 | `--embedder` | `hashing` | انتخاب بردارساز |
+| `--model` | `intfloat/multilingual-e5-small` | مدل بردارساز (پیش فرض برای `sentence-transformers`) |
+| `--prefix` | `auto` | پیشوندهای پرسش و سند: `auto` (فقط برای مدل های E5)، `e5` یا `none` ([جزئیات](getting-started.md)) |
+| `--query-prefix` و `--passage-prefix` | | پیشوندهای دلخواه به جای `--prefix` |
 | `--strategy` | `recursive` | روش تکه کردن |
 | `--chunk-size` و `--overlap` | ۸۰۰ و ۱۲۰ | اندازه تکه و هم پوشانی |
 | `--rtl-fix` | `auto` | اصلاح ترتیب خواندن PDF |

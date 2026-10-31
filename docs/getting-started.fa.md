@@ -52,11 +52,47 @@ print(answer.answer)
 ```python
 from persian_rag import OpenAICompatibleEmbedder, SentenceTransformerEmbedder
 
-local = SentenceTransformerEmbedder("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+local = SentenceTransformerEmbedder()  # intfloat/multilingual-e5-small
 remote = OpenAICompatibleEmbedder(model="text-embedding-3-small")
 ```
 
 نسخه دوم کلید را از متغیر محیطی `OPENAI_API_KEY` می خواند.
+
+## مدل های بردارساز و پیشوندها
+
+از نسخه 0.4.0 مدل پیش فرض `SentenceTransformerEmbedder` مدل [`intfloat/multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small) است (۱۱۸ میلیون پارامتر و ۳۸۴ بعد). این مدل در مجموعه های بازیابی فارسی با همان اندازه بسیار بهتر از مدل پیش فرض قبلی، `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`، کار می کند. عددها در [محک ها](benchmarks.md#embedding-models) آمده اند.
+
+مدل های E5 پیش از پرسش `query: ` و پیش از سند `passage: ` می خواهند. بردارساز این پیشوندها را خودش اضافه می کند:
+
+| `prefix` | رفتار |
+| --- | --- |
+| `"auto"` (پیش فرض) | اگر مدل پرامپت های `query` و `document` غیر خالی داشته باشد همان ها به کار می روند. در غیر این صورت برای مدل های E5 و مدل های `persian-rag-embed` پیشوندهای E5 اضافه می شود و برای مدل های دیگر هیچ پیشوندی اضافه نمی شود. |
+| `"e5"` | همیشه `query: ` و `passage: ` اضافه می شود. |
+| `"none"` | هیچ پیشوندی اضافه نمی شود. |
+
+با `query_prefix` و `passage_prefix` می توانید نتیجه را تغییر دهید:
+
+```python
+SentenceTransformerEmbedder("intfloat/multilingual-e5-base")  # E5 prefixes
+SentenceTransformerEmbedder("BAAI/bge-m3")  # no prefix
+SentenceTransformerEmbedder("my-org/my-e5-copy", prefix="e5")  # force E5 prefixes
+SentenceTransformerEmbedder("my-org/model", query_prefix="Query: ", passage_prefix="")
+```
+
+اگر پیشوندها با پرامپت های خود مدل یکی باشند، بردارساز `encode_query` و `encode_document` را صدا می زند. پیشوندهای نهایی در ایندکس ذخیره می شوند، پس هر ایندکس همیشه به همان شکلی که ساخته شده جست و جو می شود.
+
+## ارتقا از نسخه 0.3.x
+
+* کد و ایندکس هایی که نام مدل را مشخص کرده اند بدون تغییر کار می کنند. هر ایندکس مدل سازنده اش را نگه می دارد و دستورهای `query`، `chat`، `eval` و `serve` همان مدل را بار می کنند.
+* ایندکس های ساخته شده پیش از 0.4.0 پیشوند ذخیره شده ندارند، پس بدون پیشوند جست و جو می شوند، درست مثل زمان ساخت. برای ایندکس های E5 قدیمی یک هشدار هم نمایش داده می شود: با `persian-rag ingest` دوباره بسازید تا پیشوندها و بازیابی بهتر را بگیرید.
+* `SentenceTransformerEmbedder()` بدون نام مدل حالا e5-small را بار می کند. بردارهای دو مدل با هم سازگار نیستند، هرچند هر دو ۳۸۴ بعد دارند. ایندکس هایی را که با مدل پیش فرض قبلی ساخته اید دوباره بسازید، یا مدل قبلی را صریح مشخص کنید:
+
+```bash
+persian-rag ingest ./library --index .persian-rag --embedder sentence-transformers \
+  --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
+
+* اگر ایندکسی با بردارساز مدل دیگری بار شود، حالا به جای نتیجه نادرست خطای `IndexFormatError` می گیرید. تفاوت پیشوندها فقط هشدار می دهد.
 
 ## از روی فایل ها
 

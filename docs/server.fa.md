@@ -8,7 +8,7 @@ persian-rag serve --index .persian-rag --host 127.0.0.1 --port 8000
 یا با داکر و ایمیجی که در هر انتشار منتشر می شود (صفحه [داکر](docker.md) را ببینید):
 
 ```bash
-docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.3.1
+docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.4.0
 ```
 
 یا از درون کد:
@@ -27,7 +27,7 @@ uvicorn.run(app, host="127.0.0.1", port=8000)
 
 | روش | مسیر | بدنه | خروجی |
 | --- | --- | --- | --- |
-| `GET` | `/health` | | وضعیت، نسخه، تعداد تکه ها و وجود مدل و رتبه بند |
+| `GET` | `/health` | | وضعیت، نسخه، تعداد تکه ها، وجود مدل و رتبه بند و `embedder` (نوع، مدل، بعد و پیشوندها) |
 | `POST` | `/retrieve` | `{"query": "...", "k": 5, "mode": "hybrid"}` | پرسش و فهرست نتیجه ها |
 | `POST` | `/query` | `{"question": "...", "k": 5}` | پرسش، پاسخ، متن ها، ارجاع ها و در صورت درخواست پرامپت |
 | `POST` | `/chat` | `{"message": "...", "session_id": null}` | فیلدهای `/query` به همراه `session_id`، `standalone_question` و `turn` |

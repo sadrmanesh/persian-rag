@@ -34,12 +34,16 @@ from persian_rag.documents import (
     strip_markdown,
 )
 from persian_rag.embeddings import (
+    DEFAULT_ST_MODEL,
+    LEGACY_ST_MODEL,
     Embedder,
     EmbedderSpec,
     HashingEmbedder,
     OpenAICompatibleEmbedder,
     SentenceTransformerEmbedder,
     create_embedder,
+    is_e5_model,
+    resolve_prefixes,
 )
 from persian_rag.errors import (
     ConfigError,
@@ -93,6 +97,8 @@ __all__ = [
     "CITATION_PROMPT_FA",
     "DEFAULT_PROMPT_EN",
     "DEFAULT_PROMPT_FA",
+    "DEFAULT_ST_MODEL",
+    "LEGACY_ST_MODEL",
     "BM25Index",
     "CachedEmbedder",
     "ChatAnswer",
@@ -154,6 +160,7 @@ __all__ = [
     "extract_citations",
     "extract_main_content",
     "html_to_text",
+    "is_e5_model",
     "load_documents",
     "load_docx",
     "load_eval_examples",
@@ -167,6 +174,7 @@ __all__ = [
     "make_openai_llm",
     "normalize",
     "reciprocal_rank_fusion",
+    "resolve_prefixes",
     "retriever_from_saved",
     "save_index",
     "split_sentence_spans",

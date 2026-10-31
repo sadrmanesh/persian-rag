@@ -10,7 +10,7 @@ Install with ``pip install 'persian-rag[server]'`` and run either
 
 Endpoints:
 
-* ``GET /health``: liveness and index size.
+* ``GET /health``: liveness, index size, and the embedding model in use.
 * ``POST /retrieve``: ranked chunks for a query.
 * ``POST /query``: retrieved chunks plus a generated answer when the
   pipeline has an LLM, with citations when the pipeline has
@@ -30,7 +30,8 @@ from collections import OrderedDict
 from typing import Any, Literal
 
 from persian_rag.chat import ChatSession, ConversationMemory
-from persian_rag.errors import MissingDependencyError
+from persian_rag.embeddings import EmbedderSpec
+from persian_rag.errors import MissingDependencyError, PersianRagError
 from persian_rag.pipeline import RAGPipeline
 from persian_rag.version import __version__
 
@@ -114,12 +115,21 @@ class ChatResponse(QueryResponse):
     turn: int
 
 
+class EmbedderInfo(BaseModel):
+    kind: str | None = None
+    model: str | None = None
+    dimension: int | None = None
+    query_prefix: str | None = None
+    passage_prefix: str | None = None
+
+
 class HealthResponse(BaseModel):
     status: str
     version: str
     chunks: int
     llm: bool
     reranker: bool
+    embedder: EmbedderInfo
 
 
 def create_app(
@@ -150,6 +160,7 @@ def create_app(
         return new_id, session
 
     app = FastAPI(title=title, version=__version__)
+    embedder_info = _embedder_info(pipeline.retriever.embedder)
 
     def check_k(k: int) -> None:
         if k > max_k:
@@ -163,6 +174,7 @@ def create_app(
             chunks=len(pipeline.retriever),
             llm=pipeline.llm is not None,
             reranker=pipeline.reranker is not None,
+            embedder=embedder_info,
         )
 
     @app.post("/retrieve", response_model=RetrieveResponse)
@@ -211,3 +223,24 @@ def create_app(
         return {"deleted": sessions.pop(session_id, None) is not None}
 
     return app
+
+
+def _embedder_info(embedder: object) -> EmbedderInfo:
+    """Describe the query embedder for ``/health``. Never includes API keys."""
+
+    to_spec = getattr(embedder, "to_spec", None)
+    if not callable(to_spec):
+        return EmbedderInfo(kind=type(embedder).__name__)
+    try:
+        spec = to_spec()
+    except (AttributeError, TypeError, ValueError, PersianRagError):
+        return EmbedderInfo(kind=type(embedder).__name__)
+    if not isinstance(spec, EmbedderSpec):
+        return EmbedderInfo(kind=type(embedder).__name__)
+    return EmbedderInfo(
+        kind=spec.kind,
+        model=spec.model,
+        dimension=spec.dimension,
+        query_prefix=spec.query_prefix,
+        passage_prefix=spec.passage_prefix,
+    )

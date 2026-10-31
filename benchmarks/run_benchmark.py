@@ -70,7 +70,7 @@ def make_embedder(args: argparse.Namespace) -> Embedder:
         return HashingEmbedder(dimension=args.dimension)
     from persian_rag.embeddings import SentenceTransformerEmbedder
 
-    return SentenceTransformerEmbedder(args.model)
+    return SentenceTransformerEmbedder(args.model, prefix=args.prefix)
 
 
 def percentile(values: Sequence[float], fraction: float) -> float:
@@ -143,6 +143,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--embedder", choices=["hashing", "sentence-transformers"], default="hashing"
     )
     parser.add_argument("--model", default="intfloat/multilingual-e5-small")
+    parser.add_argument(
+        "--prefix",
+        choices=["auto", "e5", "none"],
+        default="auto",
+        help="Query and passage prefixes for sentence-transformers models",
+    )
     parser.add_argument("--dimension", type=int, default=512)
     parser.add_argument("--repeat", type=int, default=5, help="Timing rounds per configuration")
     parser.add_argument("--json", type=Path, help="Also write the results to this JSON file")
