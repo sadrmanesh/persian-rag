@@ -346,6 +346,24 @@ Releases are published to PyPI by the `Release` workflow when a `v*` tag is push
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and proposals are welcome in Persian or English.
 
+## Technical report
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23923535.svg)](https://doi.org/10.5281/zenodo.23923535)
+
+persian-rag: A Persian-First Retrieval-Augmented Generation Toolkit — Normalization, Hybrid Retrieval, and Retrieval Evaluation. M. N. Sadrmanesh, Zenodo, 2026. <https://doi.org/10.5281/zenodo.23923535> Also on [ResearchGate](https://www.researchgate.net/publication/417410775) and [Academia.edu](https://www.academia.edu/180135440).
+
+```bibtex
+@techreport{sadrmanesh2026persianrag,
+  author      = {Sadrmanesh, Mohammad Naser},
+  title       = {persian-rag: A Persian-First Retrieval-Augmented Generation Toolkit — Normalization, Hybrid Retrieval, and Retrieval Evaluation},
+  institution = {Zenodo},
+  year        = {2026},
+  version     = {1.0},
+  doi         = {10.5281/zenodo.23923535},
+  url         = {https://doi.org/10.5281/zenodo.23923535}
+}
+```
+
 ## License
 
 [MIT](LICENSE). Copyright (c) 2026 Naser Sadrmanesh.

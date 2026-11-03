@@ -32,3 +32,7 @@ The core package has no dependencies. Heavy pieces are optional extras, so you i
 - Comparing settings? See [Benchmarks](benchmarks.md).
 
 Every page is also available in Persian through the language selector.
+
+## Technical report
+
+[persian-rag: A Persian-First Retrieval-Augmented Generation Toolkit — Normalization, Hybrid Retrieval, and Retrieval Evaluation](https://doi.org/10.5281/zenodo.23923535). M. N. Sadrmanesh, Zenodo, 2026. DOI: [10.5281/zenodo.23923535](https://doi.org/10.5281/zenodo.23923535)
