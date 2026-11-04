@@ -279,10 +279,14 @@ class RewritingRetriever:
 
     Wraps any object with ``retrieve(query, k, mode=...)`` such as
     :class:`~persian_rag.retrieval.HybridRetriever`. The original query gets
-    ``original_weight`` in the fusion; variants get weight 1. Results keep
-    the text and position of the underlying chunks; ``score`` is the fused
-    RRF score and ``metadata["matched_queries"]`` lists the variants that
-    found the chunk.
+    ``original_weight`` in the fusion. The other variants share
+    ``variant_weight`` as one family: each gets ``variant_weight`` divided by
+    the number of variants, so adding more rewrites never adds more total
+    weight and the original query stays dominant. Results keep the text and
+    position of the underlying chunks; ``score`` is the fused RRF score,
+    ``metadata["matched_queries"]`` lists the variants that found the chunk,
+    and ``metadata["query_contributions"]`` maps each of those variants to
+    the part of ``score`` it added.
     """
 
     def __init__(
@@ -292,18 +296,22 @@ class RewritingRetriever:
         *,
         rrf_k: int = 60,
         original_weight: float = 2.0,
+        variant_weight: float = 1.0,
         candidate_multiplier: int = 2,
     ) -> None:
         if not callable(getattr(retriever, "retrieve", None)):
             raise TypeError("retriever must have a retrieve() method")
         if original_weight <= 0:
             raise ValueError("original_weight must be > 0")
+        if variant_weight < 0:
+            raise ValueError("variant_weight must be >= 0")
         if candidate_multiplier < 1:
             raise ValueError("candidate_multiplier must be >= 1")
         self.retriever = retriever
         self.rewriter = rewriter or QueryRewriter()
         self.rrf_k = rrf_k
         self.original_weight = original_weight
+        self.variant_weight = variant_weight
         self.candidate_multiplier = candidate_multiplier
 
     def __len__(self) -> int:
@@ -329,19 +337,31 @@ class RewritingRetriever:
         pool = k * self.candidate_multiplier
         rankings: list[list[str]] = []
         by_id: dict[str, RetrievalResult] = {}
+        weights = self.weights(len(variants))
         matched: dict[str, list[str]] = {}
-        for variant in variants:
+        contributions: dict[str, dict[str, float]] = {}
+        for variant, weight in zip(variants, weights, strict=True):
             results: list[RetrievalResult] = retrieve(variant, pool, mode=mode)
-            rankings.append([item.chunk_id for item in results])
-            for item in results:
+            ranking = [item.chunk_id for item in results]
+            rankings.append(ranking)
+            seen: set[str] = set()
+            for rank, item in enumerate(results, start=1):
                 by_id.setdefault(item.chunk_id, item)
+                if item.chunk_id in seen:
+                    continue
+                seen.add(item.chunk_id)
                 matched.setdefault(item.chunk_id, []).append(variant)
-        weights = [self.original_weight] + [1.0] * (len(variants) - 1)
+                per_query = contributions.setdefault(item.chunk_id, {})
+                per_query[variant] = per_query.get(variant, 0.0) + weight / (self.rrf_k + rank)
         fused = reciprocal_rank_fusion(rankings, k=self.rrf_k, weights=weights)
         output: list[RetrievalResult] = []
         for chunk_id, score in fused[:k]:
             item = by_id[chunk_id]
-            metadata = {**item.metadata, "matched_queries": matched[chunk_id]}
+            metadata = {
+                **item.metadata,
+                "matched_queries": matched[chunk_id],
+                "query_contributions": contributions[chunk_id],
+            }
             output.append(
                 RetrievalResult(
                     chunk_id=item.chunk_id,
@@ -357,6 +377,19 @@ class RewritingRetriever:
                 )
             )
         return output
+
+    def weights(self, count: int) -> list[float]:
+        """Fusion weights for ``count`` queries, the original first.
+
+        The variants split ``variant_weight`` evenly, so their total weight
+        does not depend on how many rewrites the query has.
+        """
+
+        if count < 1:
+            return []
+        others = count - 1
+        share = self.variant_weight / others if others else 0.0
+        return [self.original_weight] + [share] * others
 
     async def aretrieve(
         self,

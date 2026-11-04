@@ -35,7 +35,7 @@ The model is asked for alternative phrasings, one per line. Its replies are clea
 
 ## Fusion
 
-`RewritingRetriever` runs every variant through the wrapped retriever and fuses the rankings with reciprocal rank fusion (`rrf_k=60`). The original query counts double (`original_weight=2.0`), so expansion adds recall without pushing exact matches down. Each result records the variants that found it in `metadata["matched_queries"]`. See the [benchmarks](benchmarks.md) for the effect on misspelled queries.
+`RewritingRetriever` runs every variant through the wrapped retriever and fuses the rankings with reciprocal rank fusion (`rrf_k=60`). The original query counts double (`original_weight=2.0`). The other variants share one fixed weight as a family (`variant_weight=1.0`, split evenly across them), so a query with many equivalent spelling or spacing rewrites does not give those rewrites more say than a query with one, and exact matches stay ahead. Each result records the variants that found it in `metadata["matched_queries"]`, and the part of the fused score each of them added in `metadata["query_contributions"]`. See the [benchmarks](benchmarks.md) for the effect on misspelled queries.
 
 ## Command line
 

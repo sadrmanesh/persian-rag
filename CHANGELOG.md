@@ -4,7 +4,17 @@ All notable changes to persian-rag are documented here. The format is based on [
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-04
+
+### Changed
+
+- `RewritingRetriever` gives the query variants a fixed total weight. The original query keeps `original_weight` (2.0), and the other variants split the new `variant_weight` (1.0) evenly, instead of each getting 1.0. Before, a query with five spelling or spacing rewrites could let them outvote the original query, so the number of variants acted as a hidden ranking parameter. Fused scores, and in some cases the order of results, change for queries with two or more variants. Pass `variant_weight` to tune the family weight. The async path uses the same weights. Fixes #11.
+- The package version is now 0.5.0.
+
 ### Added
+
+- `metadata["query_contributions"]` on `RewritingRetriever` results: the part of the fused score each matched variant added.
+- `RewritingRetriever.weights(count)` returns the fusion weights used for a given number of queries.
 
 - `intfloat/multilingual-e5-base` as a supported, more accurate embedding model. `SentenceTransformerEmbedder("e5-base")`, `--model e5-base`, and the full model name all work, with the E5 `query: `/`passage: ` prefixes added automatically. e5-small stays the default.
 - Short model names: `e5-small` and `e5-base` resolve to the full `intfloat/multilingual-e5-*` names wherever a `sentence-transformers` model name is accepted (Python, CLI, saved index specs, `run_benchmark.py`). Indexes store the full name.
@@ -116,6 +126,7 @@ All notable changes to persian-rag are documented here. The format is based on [
 - `persian-rag ingest` and `persian-rag query` commands, plus a JSON index.
 - Unit tests, Ruff, mypy, and a GitHub Actions workflow.
 
+[0.5.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.5.0
 [0.4.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.4.0
 [0.3.1]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.3.1
 [0.3.0]: https://github.com/sadrmanesh/persian-rag/releases/tag/v0.3.0

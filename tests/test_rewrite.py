@@ -4,7 +4,7 @@ import pytest
 
 from persian_rag.embeddings import HashingEmbedder
 from persian_rag.pipeline import RAGPipeline, build_retriever
-from persian_rag.retrieval import HybridRetriever
+from persian_rag.retrieval import HybridRetriever, RetrievalResult
 from persian_rag.rewrite import (
     QueryRewriter,
     RewriteConfig,
@@ -107,3 +107,71 @@ def test_rewriting_retriever_finds_alternative_spellings(
 def test_pipeline_uses_query_rewriter(spelling_retriever: HybridRetriever) -> None:
     pipeline = RAGPipeline(spelling_retriever, query_rewriter=QueryRewriter())
     assert pipeline.retrieve("هیئت مدیره", k=1, mode="sparse")[0].document_id == "board"
+
+
+class _FixedRewriter(QueryRewriter):
+    def __init__(self, variants: list[str]) -> None:
+        super().__init__()
+        self._fixed = variants
+
+    def variants(self, query: str) -> list[str]:
+        return list(self._fixed)
+
+
+class _RankingRetriever:
+    """Return chunk ``exact`` first for the original query, ``other`` first otherwise."""
+
+    def __init__(self, original: str) -> None:
+        self.original = original
+
+    def __len__(self) -> int:
+        return 2
+
+    def retrieve(self, query: str, k: int = 5, *, mode: str = "hybrid") -> list[RetrievalResult]:
+        order = ["exact", "other"] if query == self.original else ["other", "exact"]
+        return [
+            RetrievalResult(
+                chunk_id=cid, document_id=cid, text=cid, score=1.0, start=0, end=len(cid)
+            )
+            for cid in order[:k]
+        ]
+
+
+MANY_VARIANTS = ["q", "q1", "q2", "q3", "q4", "q5"]
+
+
+def test_many_variants_do_not_outvote_the_original_query() -> None:
+    retriever = RewritingRetriever(_RankingRetriever("q"), _FixedRewriter(MANY_VARIANTS))
+    results = retriever.retrieve("q", k=2)
+    assert [item.chunk_id for item in results] == ["exact", "other"]
+
+
+def test_variant_family_weight_is_fixed() -> None:
+    retriever = RewritingRetriever(_RankingRetriever("q"), _FixedRewriter(MANY_VARIANTS))
+    weights = retriever.weights(6)
+    assert weights[0] == 2.0
+    assert sum(weights[1:]) == pytest.approx(1.0)
+    assert sum(retriever.weights(3)[1:]) == pytest.approx(1.0)
+    assert retriever.weights(1) == [2.0]
+    with pytest.raises(ValueError):
+        RewritingRetriever(_RankingRetriever("q"), variant_weight=-1.0)
+
+
+def test_query_contributions_add_up_to_the_score() -> None:
+    retriever = RewritingRetriever(_RankingRetriever("q"), _FixedRewriter(MANY_VARIANTS))
+    for item in retriever.retrieve("q", k=2):
+        contributions = item.metadata["query_contributions"]
+        assert set(contributions) == set(item.metadata["matched_queries"])
+        assert sum(contributions.values()) == pytest.approx(item.score)
+    exact = retriever.retrieve("q", k=1)[0]
+    assert exact.metadata["query_contributions"]["q"] == pytest.approx(2.0 / 61)
+    assert exact.metadata["query_contributions"]["q1"] == pytest.approx(0.2 / 62)
+
+
+def test_async_path_uses_the_same_weights() -> None:
+    import asyncio
+
+    retriever = RewritingRetriever(_RankingRetriever("q"), _FixedRewriter(MANY_VARIANTS))
+    results = asyncio.run(retriever.aretrieve("q", k=2))
+    assert results == retriever.retrieve("q", k=2)
+    assert results[0].chunk_id == "exact"
