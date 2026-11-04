@@ -16,7 +16,7 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 **Live demo:** [persian-rag on Hugging Face Spaces](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) runs normalization and retrieval in the browser. **Benchmark dataset:** [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub.
 
-**Read more:** [Why RAG breaks on Persian text, and what I built to fix it](https://dev.to/sadrmanesh/why-rag-breaks-on-persian-text-and-what-i-built-to-fix-it-normalization-half-spaces-spelling-2jgm) on Dev.to · [The design decisions that fixed it](https://www.linkedin.com/pulse/why-rag-quietly-fails-persian-text-design-decisions-fixed-sadrmanesh-wd4vf/) on LinkedIn
+**Read more:** [Why RAG breaks on Persian text, and what I built to fix it](https://dev.to/sadrmanesh/why-rag-breaks-on-persian-text-and-what-i-built-to-fix-it-normalization-half-spaces-spelling-2jgm) on Dev.to · [The design decisions that fixed it](https://www.linkedin.com/pulse/why-rag-quietly-fails-persian-text-design-decisions-fixed-sadrmanesh-wd4vf/) on LinkedIn · Update: [A week of reader feedback: what changed in my four AI-for-commerce tools](https://dev.to/sadrmanesh/a-week-of-reader-feedback-what-changed-in-my-four-ai-for-commerce-tools-5aa1) on Dev.to · [What reader feedback taught me about building production-safe AI tooling for commerce](https://www.linkedin.com/pulse/what-reader-feedback-taught-me-building-ai-tooling-naser-sadrmanesh-w3guf/) on LinkedIn
 
 ## خلاصه فارسی
 
