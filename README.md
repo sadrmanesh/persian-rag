@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-sadrmanesh.github.io-009688)](https://sadrmanesh.github.io/persian-rag/)
 [![Hugging Face Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo)
+[![Dataset DOI](https://img.shields.io/badge/dataset%20DOI-10.6084%2Fm9.figshare.34913889-blue)](https://doi.org/10.6084/m9.figshare.34913889)
 
 Persian-first retrieval-augmented generation for Python.
 
@@ -14,7 +15,7 @@ The core install is pure Python with no dependencies. Every heavy piece (models,
 
 **Documentation:** <https://sadrmanesh.github.io/persian-rag/> in English and Persian. The sources live in [`docs/`](docs/) and build with MkDocs (see [Documentation](#documentation)).
 
-**Live demo:** [persian-rag on Hugging Face Spaces](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) runs normalization and retrieval in the browser. **Benchmark dataset:** [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub.
+**Live demo:** [persian-rag on Hugging Face Spaces](https://huggingface.co/spaces/sadrmanesh/persian-rag-demo) runs normalization and retrieval in the browser. **Benchmark dataset:** [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench) on the Hugging Face Hub ([DOI 10.6084/m9.figshare.34913889](https://doi.org/10.6084/m9.figshare.34913889) on Figshare).
 
 **Read more:** [Why RAG breaks on Persian text, and what I built to fix it](https://dev.to/sadrmanesh/why-rag-breaks-on-persian-text-and-what-i-built-to-fix-it-normalization-half-spaces-spelling-2jgm) on Dev.to · [The design decisions that fixed it](https://www.linkedin.com/pulse/why-rag-quietly-fails-persian-text-design-decisions-fixed-sadrmanesh-wd4vf/) on LinkedIn · Update: [A week of reader feedback: what changed in my four AI-for-commerce tools](https://dev.to/sadrmanesh/a-week-of-reader-feedback-what-changed-in-my-four-ai-for-commerce-tools-5aa1) on Dev.to · [What reader feedback taught me about building production-safe AI tooling for commerce](https://www.linkedin.com/pulse/what-reader-feedback-taught-me-building-ai-tooling-naser-sadrmanesh-w3guf/) on LinkedIn
 
@@ -310,7 +311,7 @@ With `--embedder sentence-transformers`, the 0.4.0 default model `intfloat/multi
 
 \* 632 queries against a pooled corpus of 6,405 judged passages, not the full MIRACL corpus, so not comparable with published MIRACL scores.
 
-Full table, latency, and method: [Benchmarks](https://sadrmanesh.github.io/persian-rag/benchmarks/). The same corpus and questions are on the Hugging Face Hub as [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench).
+Full table, latency, and method: [Benchmarks](https://sadrmanesh.github.io/persian-rag/benchmarks/). The same corpus and questions are on the Hugging Face Hub as [sadrmanesh/persian-rag-bench](https://huggingface.co/datasets/sadrmanesh/persian-rag-bench), and archived on Figshare with DOI [10.6084/m9.figshare.34913889](https://doi.org/10.6084/m9.figshare.34913889).
 
 ## Documentation
 
@@ -361,6 +362,23 @@ persian-rag: A Persian-First Retrieval-Augmented Generation Toolkit — Normaliz
   version     = {1.0},
   doi         = {10.5281/zenodo.23923535},
   url         = {https://doi.org/10.5281/zenodo.23923535}
+}
+```
+
+## Dataset
+
+[![DOI](https://img.shields.io/badge/DOI-10.6084%2Fm9.figshare.34913889-blue)](https://doi.org/10.6084/m9.figshare.34913889)
+
+persian-rag-bench: A Persian Retrieval Benchmark for Spelling-Variant Robustness. M. N. Sadrmanesh, Figshare, 2026. <https://doi.org/10.6084/m9.figshare.34913889>
+
+```bibtex
+@dataset{sadrmanesh2026persianragbench,
+  author    = {Sadrmanesh, Mohammad Naser},
+  title     = {persian-rag-bench: A Persian Retrieval Benchmark for Spelling-Variant Robustness},
+  publisher = {Figshare},
+  year      = {2026},
+  doi       = {10.6084/m9.figshare.34913889},
+  url       = {https://doi.org/10.6084/m9.figshare.34913889}
 }
 ```
 
