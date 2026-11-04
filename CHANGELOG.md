@@ -15,7 +15,6 @@ All notable changes to persian-rag are documented here. The format is based on [
 
 - `metadata["query_contributions"]` on `RewritingRetriever` results: the part of the fused score each matched variant added.
 - `RewritingRetriever.weights(count)` returns the fusion weights used for a given number of queries.
-
 - `intfloat/multilingual-e5-base` as a supported, more accurate embedding model. `SentenceTransformerEmbedder("e5-base")`, `--model e5-base`, and the full model name all work, with the E5 `query: `/`passage: ` prefixes added automatically. e5-small stays the default.
 - Short model names: `e5-small` and `e5-base` resolve to the full `intfloat/multilingual-e5-*` names wherever a `sentence-transformers` model name is accepted (Python, CLI, saved index specs, `run_benchmark.py`). Indexes store the full name.
 - `E5_BASE_MODEL`, `ST_MODEL_ALIASES`, and `resolve_model_name` in the public API.

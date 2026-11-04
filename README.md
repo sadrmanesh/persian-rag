@@ -72,8 +72,8 @@ Every release publishes the HTTP API as a multi-architecture image (`linux/amd64
 
 ```bash
 docker run --rm -v "$PWD/library:/library:ro" -v persian-rag-data:/data \
-  ghcr.io/sadrmanesh/persian-rag:0.4.0 ingest /library --index /data/index
-docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.4.0
+  ghcr.io/sadrmanesh/persian-rag:0.5.0 ingest /library --index /data/index
+docker run -d -p 8000:8000 -v persian-rag-data:/data ghcr.io/sadrmanesh/persian-rag:0.5.0
 ```
 
 Tags are `X.Y.Z`, `X.Y`, and `latest`. The container runs as a non-root user and has a health check on `/health`. See [Docker](https://sadrmanesh.github.io/persian-rag/docker/) for language models, custom extras, and building the image yourself.

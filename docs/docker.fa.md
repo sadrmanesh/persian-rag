@@ -8,7 +8,7 @@ ghcr.io/sadrmanesh/persian-rag
 
 | برچسب | به چه اشاره می کند |
 | --- | --- |
-| `0.4.0` | دقیقا همین نسخه |
+| `0.5.0` | دقیقا همین نسخه |
 | `0.4` | تازه ترین نسخه 0.4.x |
 | `latest` | تازه ترین نسخه |
 
@@ -24,11 +24,11 @@ docker volume create persian-rag-data
 docker run --rm \
   -v "$PWD/library:/library:ro" \
   -v persian-rag-data:/data \
-  ghcr.io/sadrmanesh/persian-rag:0.4.0 ingest /library --index /data/index
+  ghcr.io/sadrmanesh/persian-rag:0.5.0 ingest /library --index /data/index
 
 docker run -d --name persian-rag -p 8000:8000 \
   -v persian-rag-data:/data \
-  ghcr.io/sadrmanesh/persian-rag:0.4.0
+  ghcr.io/sadrmanesh/persian-rag:0.5.0
 ```
 
 ```bash
@@ -46,7 +46,7 @@ curl -s localhost:8000/retrieve -H 'content-type: application/json' \
 ```bash
 docker run -d -p 8000:8000 -v persian-rag-data:/data \
   -e OPENAI_API_KEY \
-  ghcr.io/sadrmanesh/persian-rag:0.4.0 \
+  ghcr.io/sadrmanesh/persian-rag:0.5.0 \
   serve --index /data/index --host 0.0.0.0 --port 8000 --llm openai --citations
 ```
 
