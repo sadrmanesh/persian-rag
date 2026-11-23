@@ -1,0 +1,11 @@
+# Experiment dependencies. From the repository root, also install this package:
+#   pip install -e ".[sentence-transformers]"
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+pyarrow>=14
+matplotlib>=3.8
+torch>=2.1
+sentence-transformers>=3.0
+hazm>=0.7
+parsivar>=0.2.3

@@ -1,0 +1,54 @@
+{
+ "min_freq": 5,
+ "n_words_with_variants": 2273,
+ "by_rule": {
+  "zwnj->space": 1597,
+  "ی->ي": 39,
+  "أ->ا": 32,
+  "ک->ك": 9,
+  "آ->ا": 113,
+  "zwnj->joined": 688,
+  "ئ->و": 15,
+  "ئ->ی": 62,
+  "ئ->ا": 3,
+  "ؤ->و": 19
+ },
+ "overlap_with_rewriter_table": [
+  "آئینه",
+  "آینه",
+  "تأثیر",
+  "تأمین",
+  "تأیید",
+  "جزئی",
+  "دائم",
+  "رئیس",
+  "سؤال",
+  "قرآن",
+  "مأموریت",
+  "مؤثر",
+  "مؤسسه",
+  "مؤلف",
+  "مسئله",
+  "مسئول",
+  "مسئولیت",
+  "هیئت"
+ ],
+ "natural_query_noise": {
+  "miracl": {
+   "n": 632,
+   "has_zwnj": 62,
+   "has_spaced_mi": 120,
+   "has_arabic_yeh_kaf": 2,
+   "has_alef_madda": 104,
+   "has_hamza": 27
+  },
+  "pquad": {
+   "n": 5995,
+   "has_zwnj": 3092,
+   "has_spaced_mi": 22,
+   "has_arabic_yeh_kaf": 258,
+   "has_alef_madda": 691,
+   "has_hamza": 213
+  }
+ }
+}

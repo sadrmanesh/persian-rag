@@ -1,0 +1,17 @@
+# Downloaded corpora and pools built by prepare_data.py (MIRACL-fa is large).
+data/
+
+# Embedding chunks, query caches, and pickled retrieval runs.
+cache_store/
+
+# Per-query metric dumps from evaluate.py. Summary tables stay in results/.
+results/*_per_query.csv.gz
+
+# Optional Vazirmatn TTFs for Persian labels in diagrams.py.
+fonts/
+
+__pycache__/
+*.py[cod]
+
+# Manuscript assembly output from build_source.py.
+revision_source.md
